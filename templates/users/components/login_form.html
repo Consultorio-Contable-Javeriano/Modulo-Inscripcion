@@ -1,4 +1,4 @@
-<form hx-post="{% url 'login' %}" hx-target="#login-form-wrapper" hx-swap="outerHTML" class="space-y-4 [&_input]:w-full [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-sm [&_input]:px-3 [&_input]:py-2 [&_input]:mt-1 [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-javblue">
+<form hx-post="{% url 'login' %}" hx-target="#login-form-wrapper" hx-swap="innerHTML" class="space-y-4 [&_input]:w-full [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-sm [&_input]:px-3 [&_input]:py-2 [&_input]:mt-1 [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-javblue">
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 

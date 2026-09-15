@@ -61,7 +61,7 @@ Si necesitas exponerlo en otro puerto o en la red local: `python manage.py runse
 python manage.py test
 ```
 
-46 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
+49 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
 sesión), perfil de usuario y todo el flujo de inscripción.
 
 ## Estructura
@@ -267,10 +267,48 @@ sección; ver sección 7 para los 9 restantes.
 - **Tests**: `enrollments/tests.py` suma `LocalityFieldTests` (10 tests: etiqueta por ciudad, campo
   oculto donde no aplica, tolerancia a tildes/mayúsculas, valor que sobrevive al intercambio de HTMX,
   obligatoriedad condicional, descarte del valor obsoleto, autocompletado y control de acceso) y
-  `users/tests.py` suma 3 del correo alternativo — **46 tests en total**.
+  `users/tests.py` suma 3 del correo alternativo — 46 tests tras esta sección; ver sección 9 para los 3
+  restantes.
   - Ojo al revisar el diff: tres tests de inscripción que ya existían usaban `city='Bogotá'` sin
     localidad. Se les agregó el campo; dos de ellos habrían seguido pasando, pero por el motivo
     equivocado (por falta de localidad, no por lo que querían probar).
+
+### 9. Validación en navegador con Playwright y correcciones
+
+Se recorrieron en un navegador real (Playwright) todos los formularios: registro, perfil, inscripción,
+cancelación, login (con avisos y bloqueo), recuperación de contraseña y panel de staff. Los tests de
+Django usan el cliente de pruebas, que no ejecuta JavaScript ni HTMX, así que esta pasada encontró tres
+problemas que la suite no podía ver:
+
+- **Login inutilizable tras un error (bug previo, presente desde el commit inicial `b2fe5d0`)**:
+  `templates/users/components/login_form.html` usaba `hx-target="#login-form-wrapper"` con
+  `hx-swap="outerHTML"`, pero `login_view` responde solo con el `<form>`. El primer error reemplazaba el
+  contenedor por el formulario suelto y, desde el segundo intento, HTMX abortaba con
+  `htmx:targetError` **sin enviar la petición**. Verificado en el navegador: ni con la contraseña correcta
+  se podía entrar sin recargar la página, y los avisos de intentos restantes y el bloqueo de la sección 7
+  nunca llegaban al usuario (el servidor recibió 1 de 6 intentos). Se cambió a `hx-swap="innerHTML"`.
+  Verificado después: llegan 6 de 6 intentos, avisos en el 3.º y 4.º, bloqueo en el 5.º, y el login
+  funciona tras un error.
+- **Error de consola y valor perdido en Localidad/Comuna (introducido en la sección 8)**: en las ciudades
+  sin localidad ni comuna el campo no se renderizaba, así que `hx-include="[name=locality]"` no encontraba
+  nada: HTMX registraba un error en cada cambio de ciudad y lo escrito se perdía en un recorrido como
+  Bogotá → Villavicencio → Medellín. Ahora `locality_field.html` deja un
+  `<input type="hidden" name="locality">` en ese caso; `EnrollmentForm.clean()` lo sigue descartando
+  para esas ciudades.
+- **Comentario de plantilla visible**: un `{# ... #}` de dos líneas en `locality_field.html` se imprimía
+  como texto debajo de "Ciudad", porque Django solo acepta `{# #}` en una sola línea. Se cambió a
+  `{% comment %}`.
+- **Tests**: 3 de regresión — el comentario no se filtra a la página, el valor sobrevive mientras el campo
+  está oculto, y el invariante de estructura del login por HTMX (el cliente de pruebas no ejecuta HTMX,
+  así que se protege la estructura y no el comportamiento) — **49 tests en total**.
+- **Observaciones de la validación, sin corregir**:
+  - Al cambiar de ciudad se conserva lo escrito en localidad/comuna. Ayuda si el usuario solo corrige el
+    nombre de la ciudad, pero puede arrastrar un valor sin sentido (p. ej. "Suba" quedando como comuna de
+    Medellín); el servidor no valida nombres de localidades.
+  - Cada edición de "Ciudad" puede disparar dos peticiones iguales (`keyup` y luego `change` al salir del
+    campo). Inofensivo, pero redundante.
+  - "Correo electrónico alternativo" y "Tiene negocio propio" son campos independientes del perfil: el
+    correo alternativo se muestra siempre y no depende de la casilla.
 
 ---
 
@@ -283,6 +321,12 @@ sección; ver sección 7 para los 9 restantes.
   reproducibles conviene generar un lockfile (`pip freeze` o `pip-tools`).
 - El admin de Django sigue siendo el único lugar para dar de alta `Module`s; no hay UI para que el staff
   los cree/edite fuera del admin.
+- El panel de staff (`templates/enrollments/staff_dashboard.html`) no muestra la Localidad/Comuna agregada
+  en la sección 8: el dato se guarda, pero el personal no lo ve (la tabla solo tiene Ciudad).
+- `favicon.ico` responde 404 en todas las páginas (error de consola cosmético).
+- Tailwind se carga por CDN, que avisa en consola que no es apto para producción.
+- La carpeta `.playwright-mcp/` (capturas y logs de la validación con Playwright) queda en la raíz y no
+  está en `.gitignore`.
 
 ### Brechas frente a "Requerimientos para módulo de login" (tareas para Samuel y Tom)
 

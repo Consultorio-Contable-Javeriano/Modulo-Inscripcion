@@ -1,5 +1,7 @@
-{# Campo de localidad/comuna. HTMX intercambia este bloque completo al cambiar la ciudad,
-   por eso el div externo se renderiza siempre, incluso cuando el campo no aplica. #}
+{% comment %}
+Campo de localidad/comuna. HTMX intercambia este bloque completo al cambiar la ciudad,
+por eso el div externo se renderiza siempre, incluso cuando el campo no aplica.
+{% endcomment %}
 <div id="locality-field">
     {% if form.shows_locality %}
     <div>
@@ -14,5 +16,8 @@
         <p class="text-sm text-red-600 mt-1">{{ error }}</p>
         {% endfor %}
     </div>
+    {% else %}
+    {# Oculto: la ciudad no usa localidad ni comuna, pero hx-include necesita encontrar el campo. #}
+    <input type="hidden" name="locality" value="{{ form.locality.value|default_if_none:'' }}">
     {% endif %}
 </div>

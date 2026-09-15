@@ -58,6 +58,24 @@ class LoginLogoutTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['HX-Redirect'], '/portal/')
 
+    def test_htmx_login_form_target_survives_the_swap(self):
+        # El formulario apunta a #login-form-wrapper y la respuesta de error es solo el <form>.
+        # Con hx-swap="outerHTML" el primer error borraba ese contenedor, y desde el segundo
+        # intento HTMX ya no enviaba nada: ni con la contrasena correcta se podia entrar sin
+        # recargar, y los avisos y el bloqueo nunca llegaban al usuario. El cliente de pruebas
+        # no ejecuta HTMX, asi que se protege el invariante de estructura.
+        page = self.client.get(reverse('login')).content.decode()
+        self.assertIn('id="login-form-wrapper"', page)
+        self.assertIn('hx-target="#login-form-wrapper"', page)
+
+        partial = self.client.post(reverse('login'), {
+            'username': 'usuario@example.com',
+            'password': 'incorrecta',
+        }, HTTP_HX_REQUEST='true').content.decode()
+        self.assertIn('hx-swap="innerHTML"', partial)
+        # El parcial no repite el contenedor: con innerHTML quedaria anidado dentro de si mismo.
+        self.assertNotIn('id="login-form-wrapper"', partial)
+
     def test_login_invalid_credentials_shows_form_again(self):
         response = self.client.post(reverse('login'), {
             'username': 'usuario@example.com',

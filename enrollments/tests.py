@@ -228,7 +228,16 @@ class LocalityFieldTests(TestCase):
     def test_field_hidden_for_cities_without_division(self):
         # En estas ciudades el campo "Barrio" ya cubre el caso; mostrar otro seria duplicarlo.
         response = self.client.get(reverse('locality_field'), {'city': 'Villavicencio'})
-        self.assertNotContains(response, 'name="locality"')
+        self.assertNotContains(response, '<label')
+        # Queda un input oculto para que hx-include siempre encuentre el campo. Sin el, HTMX
+        # registraba un error en consola cada vez que cambiaba la ciudad.
+        self.assertContains(response, 'type="hidden" name="locality"')
+
+    def test_value_kept_while_field_is_hidden(self):
+        # Bogota -> Villavicencio -> Medellin: antes el valor se perdia en el paso intermedio,
+        # porque sin campo en la pagina hx-include no tenia nada que enviar.
+        response = self.client.get(reverse('locality_field'), {'city': 'Villavicencio', 'locality': 'Suba'})
+        self.assertContains(response, 'type="hidden" name="locality" value="Suba"')
 
     def test_city_is_matched_without_accents_or_case(self):
         for escrito in ['bogota', 'BOGOTÁ', 'Bogotá D.C.']:
@@ -273,6 +282,14 @@ class LocalityFieldTests(TestCase):
         response = self.client.get(reverse('enroll', args=[otro.id]))
         self.assertEqual(response.context['form'].initial['locality'], 'Suba')
         self.assertContains(response, 'Suba')
+
+    def test_no_template_comment_leaks_into_the_page(self):
+        # Un comentario {# #} de varias lineas no es un comentario para Django: se imprime
+        # tal cual. Paso una vez en este mismo parcial.
+        for url in [reverse('locality_field'), reverse('enroll', args=[self.module.id])]:
+            response = self.client.get(url, {'city': 'Bogotá'})
+            self.assertNotContains(response, '{#', msg_prefix=url)
+            self.assertNotContains(response, '{% comment', msg_prefix=url)
 
     def test_locality_field_requires_login(self):
         self.client.logout()
