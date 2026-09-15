@@ -1,0 +1,2 @@
+django>=4.2,<5.2
+django-htmx>=1.18.0

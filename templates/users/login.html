@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <div>
+            <h2 class="text-center text-3xl font-extrabold text-gray-900">
+                Consultorio Contable
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Inicia sesión en tu cuenta
+            </p>
+        </div>
+
+        <!-- Contenedor blanco para HTMX -->
+        <div id="login-form-wrapper">
+            {% include 'users/components/login_form.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
