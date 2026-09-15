@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-10 px-4">
+    <p class="text-xs font-bold uppercase tracking-wide text-javblue mb-1">Administración</p>
+    <h1 class="text-2xl font-extrabold text-javnavy mb-1">Panel de módulos e inscripciones</h1>
+    <div class="w-12 h-1 bg-javgold mb-6"></div>
+
+    {% if modules %}
+    <div class="space-y-6">
+        {% for module in modules %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-4 bg-javnavy text-white flex items-center justify-between flex-wrap gap-2">
+                <div>
+                    <p class="font-semibold">{{ module.name }} — {{ module.semester }}</p>
+                    <p class="text-sm text-white/80">{{ module.get_modality_display }} · {{ module.schedule_details }}</p>
+                </div>
+                <span class="text-sm font-semibold bg-javgold text-javnavy px-3 py-1 rounded-sm">
+                    {{ module.enrollments.count }} inscrito{{ module.enrollments.count|pluralize }}
+                </span>
+            </div>
+            {% if module.enrollments.all %}
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-gray-600 text-left">
+                    <tr>
+                        <th class="px-4 py-2">Estudiante</th>
+                        <th class="px-4 py-2">Correo</th>
+                        <th class="px-4 py-2">Modalidad</th>
+                        <th class="px-4 py-2">Entidad</th>
+                        <th class="px-4 py-2">Ciudad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in module.enrollments.all %}
+                    <tr class="border-t border-gray-100">
+                        <td class="px-4 py-2">{{ enrollment.user.profile.full_name|default:"—" }}</td>
+                        <td class="px-4 py-2">{{ enrollment.user.email }}</td>
+                        <td class="px-4 py-2">{{ enrollment.get_chosen_modality_display }}</td>
+                        <td class="px-4 py-2">{{ enrollment.entity }}</td>
+                        <td class="px-4 py-2">{{ enrollment.city }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="p-4 text-gray-500 text-sm">Sin inscripciones todavía.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-600">No hay módulos registrados.</p>
+    {% endif %}
+</div>
+{% endblock %}

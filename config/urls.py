@@ -20,5 +20,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Conectamos las rutas de la app users
-    path('usuarios/', include('users.urls')), 
+    path('usuarios/', include('users.urls')),
+    # Portal del estudiante tras iniciar sesión
+    path('portal/', include('enrollments.urls')),
 ]

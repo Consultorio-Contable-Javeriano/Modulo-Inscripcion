@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-10 px-4">
+    <p class="text-xs font-bold uppercase tracking-wide text-javblue mb-1">Mi cuenta</p>
+    <h1 class="text-2xl font-extrabold text-javnavy mb-1">Mis inscripciones</h1>
+    <div class="w-12 h-1 bg-javgold mb-6"></div>
+
+    {% if enrollments %}
+    <div class="space-y-3">
+        {% for enrollment in enrollments %}
+        <div class="p-4 bg-white rounded shadow-sm border border-gray-100 flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <p class="font-semibold text-javnavy">{{ enrollment.module.name }} — {{ enrollment.module.semester }}</p>
+                <p class="text-sm text-gray-600">
+                    Modalidad: {{ enrollment.get_chosen_modality_display }} · Entidad: {{ enrollment.entity }} · Inscrito el {{ enrollment.enrolled_at|date:"d/m/Y" }}
+                </p>
+            </div>
+            {% if enrollment.module.is_enrollment_open %}
+            <a href="{% url 'cancel_enrollment' enrollment.id %}" class="text-sm font-semibold uppercase tracking-wide text-red-600 hover:text-red-800">
+                Cancelar
+            </a>
+            {% else %}
+            <span class="text-sm text-gray-400">Inscripciones cerradas</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-600">Aún no tienes inscripciones registradas.</p>
+    <a href="{% url 'portal_home' %}" class="inline-block mt-4 text-javblue hover:text-javnavy font-medium">Ver módulos disponibles</a>
+    {% endif %}
+</div>
+{% endblock %}

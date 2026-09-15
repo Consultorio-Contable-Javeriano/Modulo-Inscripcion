@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-javblue">
+    <div class="max-w-5xl mx-auto py-10 px-4">
+        <p class="text-xs font-bold uppercase tracking-wide text-javgold mb-1">Portal del estudiante</p>
+        <h1 class="text-3xl font-extrabold text-white">Bienvenido, {{ request.user.email }}</h1>
+    </div>
+</div>
+
+<div class="max-w-5xl mx-auto py-8 px-4">
+    {% if profile_incomplete %}
+    <div class="mb-6 p-4 rounded border-l-4 bg-yellow-50 border-javgold text-javnavy flex items-center justify-between flex-wrap gap-3">
+        <span>Aún no has completado tu perfil. Debes hacerlo antes de inscribirte a un módulo.</span>
+        <a href="{% url 'complete_profile' %}" class="bg-javblue text-white text-sm font-semibold uppercase tracking-wide px-3 py-2 rounded-sm hover:bg-javnavy transition-colors">
+            Completar perfil
+        </a>
+    </div>
+    {% endif %}
+
+    <h2 class="text-lg font-bold text-javnavy uppercase tracking-wide mb-1">Módulos disponibles</h2>
+    <div class="w-12 h-1 bg-javgold mb-5"></div>
+
+    {% if modules %}
+        <ul class="space-y-3">
+            {% for module in modules %}
+                <li class="p-4 bg-white rounded shadow-sm border border-gray-100 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <p class="font-semibold text-javnavy">{{ module.name }} — {{ module.semester }}</p>
+                        <p class="text-sm text-gray-600">{{ module.get_modality_display }} · {{ module.schedule_details }}</p>
+                    </div>
+                    {% if module.id in enrolled_module_ids %}
+                        <span class="text-sm font-semibold text-green-700">Inscrito</span>
+                    {% elif module.is_enrollment_open %}
+                        <a href="{% url 'enroll' module.id %}" class="px-4 py-2 bg-javblue text-white text-sm font-semibold uppercase tracking-wide rounded-sm hover:bg-javnavy transition-colors">Inscribirme</a>
+                    {% else %}
+                        <span class="text-sm text-gray-400">Inscripciones cerradas</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-gray-600">No hay módulos activos en este momento.</p>
+    {% endif %}
+</div>
+{% endblock %}

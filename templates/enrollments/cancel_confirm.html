@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-10 px-4">
+    <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-red-500">
+        <h1 class="text-xl font-bold text-javnavy mb-2">¿Cancelar inscripción?</h1>
+        <p class="text-gray-600 mb-6">
+            Vas a cancelar tu inscripción a <strong>{{ enrollment.module.name }}</strong> ({{ enrollment.module.semester }}). Esta acción no se puede deshacer.
+        </p>
+        <form method="post" class="flex gap-3">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white font-semibold uppercase text-sm tracking-wide rounded-sm hover:bg-red-700 transition-colors">
+                Sí, cancelar
+            </button>
+            <a href="{% url 'my_enrollments' %}" class="px-4 py-2 bg-gray-100 text-gray-700 font-semibold uppercase text-sm tracking-wide rounded-sm hover:bg-gray-200 transition-colors">
+                Volver
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

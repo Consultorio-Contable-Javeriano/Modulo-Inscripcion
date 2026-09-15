@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+<div class="min-h-[80vh] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-lg border-t-4 border-javgold">
         <div>
-            <h2 class="text-center text-3xl font-extrabold text-gray-900">
-                Consultorio Contable
+            <p class="text-xs font-bold uppercase tracking-wide text-javblue mb-1">Consultorio Contable</p>
+            <h2 class="text-3xl font-extrabold text-javnavy">
+                Portal de inscripciones
             </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
+            <p class="mt-2 text-sm text-gray-600">
                 Inicia sesión en tu cuenta
             </p>
         </div>
@@ -15,6 +16,11 @@
         <!-- Contenedor blanco para HTMX -->
         <div id="login-form-wrapper">
             {% include 'users/components/login_form.html' %}
+        </div>
+
+        <div class="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
+            <a href="{% url 'signup' %}" class="text-javblue hover:text-javnavy font-medium">Crear una cuenta</a>
+            <a href="{% url 'password_reset' %}" class="text-javblue hover:text-javnavy font-medium">¿Olvidaste tu contraseña?</a>
         </div>
     </div>
 </div>

@@ -3,21 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consultorio Contable Javeriano</title>
-    
+    <title>{% block title %}Consultorio Contable Javeriano{% endblock %}</title>
+
     <!-- Tailwind CSS (CDN para desarrollo rápido) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+    <script>
+        // Paleta inspirada en javeriana.edu.co/consultorio-contable
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        javnavy: '#173268',
+                        javblue: '#195cab',
+                        javgold: '#dbbe16',
+                    },
+                },
+            },
+        };
+    </script>
+
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    
-    <main>
-        <!-- Aquí se inyectará el contenido de login.html y futuras vistas -->
+<body class="bg-gray-50 text-gray-900 antialiased min-h-screen flex flex-col" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    <header class="bg-javnavy text-white shadow-md">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'login' %}{% endif %}" class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full bg-javgold"></span>
+                <span class="font-extrabold text-lg tracking-tight">Consultorio Contable Javeriano</span>
+            </a>
+            {% if user.is_authenticated %}
+            <nav class="flex items-center gap-5 text-sm font-medium">
+                <a href="{% url 'portal_home' %}" class="hover:text-javgold transition-colors">Portal</a>
+                <a href="{% url 'my_enrollments' %}" class="hover:text-javgold transition-colors">Mis inscripciones</a>
+                {% if user.is_staff %}
+                <a href="{% url 'staff_dashboard' %}" class="hover:text-javgold transition-colors">Panel administrativo</a>
+                {% endif %}
+                <a href="{% url 'complete_profile' %}" class="hover:text-javgold transition-colors">Mi perfil</a>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-javblue hover:bg-javgold hover:text-javnavy text-white font-semibold uppercase text-xs tracking-wide px-3 py-2 rounded-sm transition-colors">
+                        Cerrar sesión
+                    </button>
+                </form>
+            </nav>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="flex-1">
+        {% if messages %}
+        <ul class="max-w-3xl mx-auto mt-4 px-4 space-y-2">
+            {% for message in messages %}
+            <li class="p-3 rounded border-l-4 {% if message.tags == 'error' %}bg-red-50 border-red-500 text-red-800{% elif message.tags == 'success' %}bg-green-50 border-green-500 text-green-800{% else %}bg-blue-50 border-javblue text-javnavy{% endif %}">
+                {{ message }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>
+
+    <footer class="bg-javnavy text-white text-sm py-6 mt-10">
+        <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>&copy; {% now "Y" %} Consultorio Contable Javeriano</span>
+            <span class="text-white/70">Pontificia Universidad Javeriana</span>
+        </div>
+    </footer>
 
 </body>
 </html>
