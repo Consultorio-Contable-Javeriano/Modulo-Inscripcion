@@ -114,6 +114,27 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'portal_home'
 LOGOUT_REDIRECT_URL = 'login'
 
+# Bloqueo temporal de la cuenta tras varios intentos fallidos de inicio de sesión
+# (ver users/security.py). El conteo se guarda en la caché definida en CACHES.
+LOGIN_MAX_FAILED_ATTEMPTS = int(os.environ.get('DJANGO_LOGIN_MAX_FAILED_ATTEMPTS', '5'))
+LOGIN_LOCKOUT_SECONDS = int(os.environ.get('DJANGO_LOGIN_LOCKOUT_SECONDS', str(15 * 60)))
+
+# Caché en memoria del proceso. Suficiente para desarrollo y para un despliegue de un solo
+# proceso; con varios workers cada uno llevaría su propio conteo de intentos fallidos, así
+# que en producción conviene apuntar esto a Redis/Memcached o a la caché en base de datos.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'consultorio-contable',
+    }
+}
+
+# Cierre de sesión por inactividad. SESSION_SAVE_EVERY_REQUEST renueva la cookie en cada
+# petición, así el plazo cuenta desde la última actividad y no desde el inicio de sesión;
+# pensado para los computadores compartidos del consultorio.
+SESSION_COOKIE_AGE = int(os.environ.get('DJANGO_SESSION_COOKIE_AGE', str(30 * 60)))
+SESSION_SAVE_EVERY_REQUEST = True
+
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 

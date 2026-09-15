@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from . import security
 from .forms import SignupForm, UserProfileForm
 from .models import UserProfile
 
@@ -19,30 +20,44 @@ def _safe_next_url(request):
 
 
 def login_view(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            next_url = _safe_next_url(request)
+    lockout_notice = None
 
-            # Si es una petición de HTMX, usamos HX-Redirect para mover al usuario al portal/dashboard
-            if request.htmx:
-                response = HttpResponse(status=200)
-                response['HX-Redirect'] = next_url
-                return response
-            return redirect(next_url)
+    if request.method == 'POST':
+        username = request.POST.get('username', '')
+        locked_seconds = security.lockout_remaining_seconds(username)
+
+        if locked_seconds:
+            # Cuenta bloqueada por intentos fallidos: no llegamos a autenticar siquiera.
+            form = AuthenticationForm(request, initial={'username': username})
+            lockout_notice = security.lockout_notice(locked_seconds)
         else:
-            # Si hay error en las credenciales y viene por HTMX, devolvemos solo el formulario con los errores
-            if request.htmx:
-                return render(request, 'users/components/login_form.html', {
-                    'form': form, 'next': request.POST.get('next', ''),
-                })
-    else:
-        form = AuthenticationForm()
+            form = AuthenticationForm(request, data=request.POST)
+            if form.is_valid():
+                security.reset_attempts(username)
+                login(request, form.get_user())
+                next_url = _safe_next_url(request)
+
+                # Si es una petición de HTMX, usamos HX-Redirect para mover al usuario al portal/dashboard
+                if request.htmx:
+                    response = HttpResponse(status=200)
+                    response['HX-Redirect'] = next_url
+                    return response
+                return redirect(next_url)
+
+            remaining = security.register_failed_attempt(username)
+            if remaining == 0:
+                lockout_notice = security.lockout_notice(security.lockout_remaining_seconds(username))
+            elif remaining <= security.WARN_WHEN_REMAINING:
+                form.add_error(None, security.remaining_attempts_notice(remaining))
+
+        context = {'form': form, 'next': request.POST.get('next', ''), 'lockout_notice': lockout_notice}
+        # Si viene por HTMX, devolvemos solo el formulario con los errores
+        if request.htmx:
+            return render(request, 'users/components/login_form.html', context)
+        return render(request, 'users/login.html', context)
 
     # Si entra por primera vez a la página de login
-    return render(request, 'users/login.html', {'form': form, 'next': request.GET.get('next', '')})
+    return render(request, 'users/login.html', {'form': AuthenticationForm(), 'next': request.GET.get('next', '')})
 
 
 def signup_view(request):

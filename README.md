@@ -32,7 +32,8 @@ python manage.py createsuperuser
 ```
 
 Variables de entorno disponibles en `.env` (ver `.env.example`): `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`,
-`DJANGO_ALLOWED_HOSTS`, `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL`, `DJANGO_SECURE_SSL_REDIRECT`.
+`DJANGO_ALLOWED_HOSTS`, `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL`, `DJANGO_SECURE_SSL_REDIRECT`,
+`DJANGO_LOGIN_MAX_FAILED_ATTEMPTS`, `DJANGO_LOGIN_LOCKOUT_SECONDS`, `DJANGO_SESSION_COOKIE_AGE`.
 
 ## Levantar el servidor
 
@@ -60,7 +61,8 @@ Si necesitas exponerlo en otro puerto o en la red local: `python manage.py runse
 python manage.py test
 ```
 
-24 tests cubren autenticación (login, logout, registro), perfil de usuario y todo el flujo de inscripción.
+33 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
+sesión), perfil de usuario y todo el flujo de inscripción.
 
 ## Estructura
 
@@ -200,7 +202,38 @@ autenticación e infraestructura que faltaban. Detalle completo, sección por se
 - **Tests**: `enrollments/tests.py` pasó de 7 a 14 tests (perfil obligatorio, coherencia de modalidad,
   autocompletado con `UserSavedDefaults`, aislamiento entre usuarios en "Mis inscripciones", cancelación,
   panel de staff con y sin permisos) y `users/tests.py` pasó de 0 a 10 tests (registro y sus validaciones,
-  login, login por HTMX, credenciales inválidas, logout, creación/edición de perfil) — 24 tests en total.
+  login, login por HTMX, credenciales inválidas, logout, creación/edición de perfil) — 24 tests tras esta
+sección; ver sección 7 para los 9 restantes.
+
+### 7. Seguridad del inicio de sesión y de la sesión (requisitos del documento de login)
+
+- **Bloqueo tras 5 intentos fallidos**: `users/security.py` (archivo nuevo) lleva la cuenta de intentos
+  fallidos en la caché de Django y bloquea la cuenta durante 15 minutos al llegar al límite;
+  `users/views.py: login_view` lo consulta *antes* de autenticar, así que mientras dure el bloqueo ni
+  siquiera una contraseña correcta abre sesión. Se implementó a mano en vez de con `django-axes` para no
+  agregar dependencias: son ~90 líneas y `requirements.txt` sigue con dos paquetes.
+  - El conteo va por **correo escrito en el formulario**, exista o no esa cuenta, para no revelar qué
+    correos están registrados; el correo se guarda hasheado (SHA-256) en la caché.
+  - A falta de 2 intentos o menos, el formulario avisa cuántos quedan
+    (`security.WARN_WHEN_REMAINING`); avisar desde el primer error sería ruido para un simple dedazo.
+  - Límite y duración configurables vía `DJANGO_LOGIN_MAX_FAILED_ATTEMPTS` y
+    `DJANGO_LOGIN_LOCKOUT_SECONDS` (`config/settings.py`, documentadas en `.env.example`).
+  - `config/settings.py` declara `CACHES` explícitamente (`LocMemCache`). **Ojo en despliegue**: al ser
+    memoria por proceso, con varios workers cada uno llevaría su propio conteo; en producción hay que
+    apuntar la caché a Redis/Memcached o a la caché en base de datos para que el bloqueo sea real.
+  - Tratamiento del riesgo conocido: al ser un bloqueo *por cuenta*, un atacante puede dejar fuera a un
+    usuario legítimo a propósito. Es lo que pide el documento; si molesta en la práctica, la variante
+    habitual es combinar la clave con la IP de origen.
+- **Cierre de sesión por inactividad**: `config/settings.py` agrega `SESSION_COOKIE_AGE` (30 minutos por
+  defecto, configurable con `DJANGO_SESSION_COOKIE_AGE`) y `SESSION_SAVE_EVERY_REQUEST = True`, que
+  renueva la cookie en cada petición para que el plazo cuente desde la última actividad y no sea una
+  duración fija desde el login. Antes regía el default de Django: 2 semanas fijas.
+  - Queda a criterio del equipo añadir también `SESSION_EXPIRE_AT_BROWSER_CLOSE = True`; tiene sentido
+    para los computadores compartidos del consultorio, pero el documento no lo pedía.
+- **Tests**: `users/tests.py` suma `LoginLockoutTests` (7 tests: bloqueo al quinto fallo, contraseña
+  correcta rechazada durante el bloqueo, reinicio del contador tras un login exitoso, aislamiento entre
+  cuentas, aviso previo, aviso por HTMX, vencimiento del bloqueo) y `SessionExpirationSettingsTests`
+  (2 tests) — **33 tests en total**.
 
 ---
 
@@ -232,14 +265,6 @@ cubiertos. Quedan pendientes estos puntos explícitos del documento que no se im
   entidades (fundaciones, colegios, parroquias, etc.) con una opción "Otra" de texto libre solo como
   fallback. Hoy `entity` es siempre un campo de texto libre, lo que es más difícil de usar para alguien
   con baja alfabetización digital que elegir de una lista.
-
-**Seguridad (decisiones explícitas del stakeholder en el documento):**
-- **Bloqueo de cuenta tras 5 intentos fallidos de login**: acordado explícitamente en el documento; no
-  hay nada implementado (requeriría algo como `django-axes` o un throttling propio sobre `login_view`).
-- **Cierre de sesión por inactividad**: el documento resuelve este punto usando `SESSION_COOKIE_AGE`
-  (con `SESSION_SAVE_EVERY_REQUEST=True` para que sea realmente por inactividad y no una duración fija),
-  pensado para proteger datos financieros en computadores compartidos/públicos del consultorio. No está
-  configurado en `settings.py` (usa el default de Django de 2 semanas fijas).
 
 **Modelo de datos incompleto:**
 - **Correo electrónico alternativo (opcional)** en `UserProfile`: el documento lo pide explícitamente

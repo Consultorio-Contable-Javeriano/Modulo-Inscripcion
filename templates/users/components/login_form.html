@@ -2,6 +2,13 @@
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
+    <!-- Cuenta bloqueada temporalmente por intentos fallidos -->
+    {% if lockout_notice %}
+    <div class="p-3 rounded border-l-4 bg-amber-50 border-javgold text-javnavy text-sm">
+        {{ lockout_notice }}
+    </div>
+    {% endif %}
+
     <!-- Muestra errores globales del formulario si los hay -->
     {% if form.non_field_errors %}
     <div class="p-3 rounded border-l-4 bg-red-50 border-red-500 text-red-800 text-sm">
