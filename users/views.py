@@ -27,14 +27,14 @@ def login_view(request):
             next_url = _safe_next_url(request)
 
             # Si es una petición de HTMX, usamos HX-Redirect para mover al usuario al portal/dashboard
-            if request.headers.get('HX-Request'):
+            if request.htmx:
                 response = HttpResponse(status=200)
                 response['HX-Redirect'] = next_url
                 return response
             return redirect(next_url)
         else:
             # Si hay error en las credenciales y viene por HTMX, devolvemos solo el formulario con los errores
-            if request.headers.get('HX-Request'):
+            if request.htmx:
                 return render(request, 'users/components/login_form.html', {
                     'form': form, 'next': request.POST.get('next', ''),
                 })

@@ -38,18 +38,18 @@ class SignupTests(TestCase):
 
 class LoginLogoutTests(TestCase):
     def setUp(self):
-        self.user = CustomUser.objects.create_user(email='estudiante@example.com', password='clave-segura123')
+        self.user = CustomUser.objects.create_user(email='usuario@example.com', password='clave-segura123')
 
     def test_login_redirects_to_portal(self):
         response = self.client.post(reverse('login'), {
-            'username': 'estudiante@example.com',
+            'username': 'usuario@example.com',
             'password': 'clave-segura123',
         })
         self.assertRedirects(response, reverse('portal_home'))
 
     def test_login_htmx_returns_redirect_header(self):
         response = self.client.post(reverse('login'), {
-            'username': 'estudiante@example.com',
+            'username': 'usuario@example.com',
             'password': 'clave-segura123',
         }, HTTP_HX_REQUEST='true')
         self.assertEqual(response.status_code, 200)
@@ -57,14 +57,14 @@ class LoginLogoutTests(TestCase):
 
     def test_login_invalid_credentials_shows_form_again(self):
         response = self.client.post(reverse('login'), {
-            'username': 'estudiante@example.com',
+            'username': 'usuario@example.com',
             'password': 'incorrecta',
         })
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context['form'].is_valid())
 
     def test_logout_ends_session(self):
-        self.client.login(email='estudiante@example.com', password='clave-segura123')
+        self.client.login(email='usuario@example.com', password='clave-segura123')
         response = self.client.post(reverse('logout'), follow=True)
         self.assertRedirects(response, reverse('login'))
         self.assertFalse(response.context['user'].is_authenticated)
@@ -72,8 +72,8 @@ class LoginLogoutTests(TestCase):
 
 class ProfileTests(TestCase):
     def setUp(self):
-        self.user = CustomUser.objects.create_user(email='estudiante@example.com', password='clave-segura123')
-        self.client.login(email='estudiante@example.com', password='clave-segura123')
+        self.user = CustomUser.objects.create_user(email='usuario@example.com', password='clave-segura123')
+        self.client.login(email='usuario@example.com', password='clave-segura123')
 
     def test_profile_requires_login(self):
         self.client.logout()
@@ -82,7 +82,7 @@ class ProfileTests(TestCase):
 
     def test_create_profile(self):
         response = self.client.post(reverse('complete_profile'), {
-            'full_name': 'Estudiante de Prueba',
+            'full_name': 'Usuario de Prueba',
             'id_type': 'CC',
             'id_number': '123456789',
             'birth_date': '2000-01-01',
@@ -92,7 +92,7 @@ class ProfileTests(TestCase):
         }, follow=True)
 
         self.assertRedirects(response, reverse('portal_home'))
-        self.assertTrue(UserProfile.objects.filter(user=self.user, full_name='Estudiante de Prueba').exists())
+        self.assertTrue(UserProfile.objects.filter(user=self.user, full_name='Usuario de Prueba').exists())
 
     def test_edit_existing_profile(self):
         UserProfile.objects.create(

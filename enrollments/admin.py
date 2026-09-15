@@ -12,7 +12,7 @@ class ModuleAdmin(admin.ModelAdmin):
 class EnrollmentAdmin(admin.ModelAdmin):
     list_display = ('user', 'module', 'chosen_modality', 'entity', 'enrolled_at')
     
-    # Filtro crucial: Permite agrupar estudiantes por modalidad del módulo[cite: 3]
+    # Filtro crucial: Permite agrupar usuarios por modalidad del módulo[cite: 3]
     list_filter = ('module', 'chosen_modality', 'city')
     
     search_fields = ('user__email', 'user__profile__full_name')

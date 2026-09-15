@@ -11,10 +11,10 @@ from .models import Enrollment, Module
 
 class EnrollmentFlowTests(TestCase):
     def setUp(self):
-        self.user = CustomUser.objects.create_user(email='estudiante@example.com', password='clave-segura123')
+        self.user = CustomUser.objects.create_user(email='usuario@example.com', password='clave-segura123')
         UserProfile.objects.create(
             user=self.user,
-            full_name='Estudiante de Prueba',
+            full_name='Usuario de Prueba',
             id_type='CC',
             id_number='123456789',
             birth_date=date(2000, 1, 1),
@@ -42,7 +42,7 @@ class EnrollmentFlowTests(TestCase):
             schedule_details='Domingos de 9:00 a.m. a 12:00 p.m.',
             is_active=True,
         )
-        self.client.login(email='estudiante@example.com', password='clave-segura123')
+        self.client.login(email='usuario@example.com', password='clave-segura123')
 
     def test_portal_home_requires_login(self):
         self.client.logout()
