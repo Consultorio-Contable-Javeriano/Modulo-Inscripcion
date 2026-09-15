@@ -1,5 +1,7 @@
 from django import forms
+from django.urls import reverse
 
+from . import locations
 from .models import Enrollment
 
 TEXT_INPUT_CLASSES = 'w-full border border-gray-300 rounded-sm px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-javblue'
@@ -13,6 +15,7 @@ class EnrollmentForm(forms.ModelForm):
             'entity',
             'chosen_modality',
             'city',
+            'locality',
             'neighborhood',
             'data_treatment_accepted',
             'attendance_commitment',
@@ -31,6 +34,40 @@ class EnrollmentForm(forms.ModelForm):
                 field.widget.attrs['class'] = CHECKBOX_CLASSES
             else:
                 field.widget.attrs['class'] = TEXT_INPUT_CLASSES
+
+        self._setup_locality_field()
+
+    def _current_city(self):
+        if self.is_bound:
+            return self.data.get(self.add_prefix('city'), '')
+        return self.initial.get('city') or ''
+
+    def _setup_locality_field(self):
+        """Ajusta el campo de localidad/comuna a la ciudad escrita.
+
+        La obligatoriedad se resuelve en clean(): el campo siempre existe en el formulario
+        (si no, no habria nada que intercambiar por HTMX), pero solo se exige y se muestra
+        cuando la ciudad de verdad usa localidad o comuna.
+        """
+        city = self._current_city()
+        label = locations.division_label(city)
+
+        self.locality_label = label
+        self.shows_locality = label is not None
+        self.fields['locality'].required = False
+
+        if label:
+            self.fields['locality'].label = label
+            self.fields['locality'].help_text = locations.division_help_text(city)
+
+        # Al cambiar la ciudad, HTMX vuelve a pedir este campo para actualizar la etiqueta.
+        self.fields['city'].widget.attrs.update({
+            'hx-get': reverse('locality_field'),
+            'hx-target': '#locality-field',
+            'hx-swap': 'outerHTML',
+            'hx-trigger': 'change, keyup changed delay:500ms',
+            'hx-include': '[name=locality]',
+        })
 
     def clean_data_treatment_accepted(self):
         accepted = self.cleaned_data['data_treatment_accepted']
@@ -51,3 +88,17 @@ class EnrollmentForm(forms.ModelForm):
             if modality not in allowed:
                 raise forms.ValidationError('La modalidad elegida no está disponible para este módulo.')
         return modality
+
+    def clean(self):
+        cleaned_data = super().clean()
+        label = locations.division_label(cleaned_data.get('city', ''))
+        locality = (cleaned_data.get('locality') or '').strip()
+
+        if label and not locality:
+            self.add_error('locality', f'Indica la {label.lower()} para completar tu ubicación.')
+        elif not label:
+            # La ciudad no usa localidad ni comuna: descartamos lo que hubiera quedado del
+            # campo si el usuario cambió de ciudad a mitad del formulario.
+            cleaned_data['locality'] = ''
+
+        return cleaned_data

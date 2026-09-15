@@ -75,7 +75,8 @@ class EnrollmentFlowTests(TestCase):
             'entity': 'Empresa X',
             'chosen_modality': 'Presencial',  # el módulo solo permite Virtual
             'city': 'Bogotá',
-            'neighborhood': 'Chapinero',
+            'locality': 'Chapinero',
+            'neighborhood': 'Chicó',
             'data_treatment_accepted': 'on',
             'attendance_commitment': 'on',
         })
@@ -87,7 +88,8 @@ class EnrollmentFlowTests(TestCase):
             'entity': 'Empresa X',
             'chosen_modality': 'Virtual',
             'city': 'Bogotá',
-            'neighborhood': 'Chapinero',
+            'locality': 'Chapinero',
+            'neighborhood': 'Chicó',
             'data_treatment_accepted': 'on',
             'attendance_commitment': 'on',
         }, follow=True)
@@ -102,6 +104,7 @@ class EnrollmentFlowTests(TestCase):
         defaults = UserSavedDefaults.objects.get(user=self.user)
         self.assertEqual(defaults.last_entity, 'Empresa X')
         self.assertEqual(defaults.last_city, 'Bogotá')
+        self.assertEqual(defaults.last_locality, 'Chapinero')
 
     def test_cannot_enroll_twice_in_same_module(self):
         Enrollment.objects.create(
@@ -124,7 +127,8 @@ class EnrollmentFlowTests(TestCase):
             'entity': 'Empresa X',
             'chosen_modality': 'Virtual',
             'city': 'Bogotá',
-            'neighborhood': 'Chapinero',
+            'locality': 'Chapinero',
+            'neighborhood': 'Chicó',
             'attendance_commitment': 'on',
         })
 
@@ -179,3 +183,98 @@ class EnrollmentFlowTests(TestCase):
         response = self.client.get(reverse('staff_dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Nivel 1')
+
+
+class LocalityFieldTests(TestCase):
+    """Campo de localidad/comuna condicional segun la ciudad (requisito del documento)."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(email='usuario@example.com', password='clave-segura123')
+        UserProfile.objects.create(
+            user=self.user, full_name='Usuario de Prueba', id_type='CC', id_number='123456789',
+            birth_date=date(2000, 1, 1), gender='Otro', phone='3000000000',
+        )
+        now = timezone.now()
+        self.module = Module.objects.create(
+            name='Nivel 1', semester='Segundo Semestre de 2026', modality='Virtual',
+            enrollment_start=now - timedelta(days=1), enrollment_end=now + timedelta(days=1),
+            class_start_date=now.date() + timedelta(days=10),
+            schedule_details='Sábados de 2:00 p.m. a 5:00 p.m.', is_active=True,
+        )
+        self.client.login(email='usuario@example.com', password='clave-segura123')
+
+    def _payload(self, **overrides):
+        data = {
+            'entity': 'Fundación X',
+            'chosen_modality': 'Virtual',
+            'city': 'Bogotá',
+            'locality': 'Suba',
+            'neighborhood': 'Niza',
+            'data_treatment_accepted': 'on',
+            'attendance_commitment': 'on',
+        }
+        data.update(overrides)
+        return data
+
+    def test_label_is_localidad_in_bogota(self):
+        response = self.client.get(reverse('locality_field'), {'city': 'Bogotá'})
+        self.assertContains(response, 'Localidad')
+        self.assertNotContains(response, 'Comuna')
+
+    def test_label_is_comuna_in_medellin(self):
+        response = self.client.get(reverse('locality_field'), {'city': 'Medellín'})
+        self.assertContains(response, 'Comuna')
+
+    def test_field_hidden_for_cities_without_division(self):
+        # En estas ciudades el campo "Barrio" ya cubre el caso; mostrar otro seria duplicarlo.
+        response = self.client.get(reverse('locality_field'), {'city': 'Villavicencio'})
+        self.assertNotContains(response, 'name="locality"')
+
+    def test_city_is_matched_without_accents_or_case(self):
+        for escrito in ['bogota', 'BOGOTÁ', 'Bogotá D.C.']:
+            response = self.client.get(reverse('locality_field'), {'city': escrito})
+            self.assertContains(response, 'Localidad', msg_prefix=f'ciudad escrita como {escrito!r}')
+
+    def test_typed_value_survives_the_htmx_swap(self):
+        response = self.client.get(reverse('locality_field'), {'city': 'Cali', 'locality': 'Comuna 3'})
+        self.assertContains(response, 'Comuna 3')
+
+    def test_locality_required_when_city_uses_one(self):
+        response = self.client.post(reverse('enroll', args=[self.module.id]), self._payload(locality=''))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Enrollment.objects.count(), 0)
+        self.assertFormError(response.context['form'], 'locality', 'Indica la localidad para completar tu ubicación.')
+
+    def test_locality_not_required_for_other_cities(self):
+        response = self.client.post(reverse('enroll', args=[self.module.id]), self._payload(
+            city='Villavicencio', locality='', neighborhood='El Barzal',
+        ), follow=True)
+        self.assertRedirects(response, reverse('portal_home'))
+        self.assertEqual(Enrollment.objects.get().locality, '')
+
+    def test_stale_locality_discarded_when_city_has_no_division(self):
+        # El usuario escribio Bogota, lleno la localidad y luego cambio de ciudad.
+        self.client.post(reverse('enroll', args=[self.module.id]), self._payload(
+            city='Villavicencio', locality='Suba', neighborhood='El Barzal',
+        ))
+        self.assertEqual(Enrollment.objects.get().locality, '')
+
+    def test_locality_is_saved_and_autocompleted_next_time(self):
+        self.client.post(reverse('enroll', args=[self.module.id]), self._payload())
+        self.assertEqual(UserSavedDefaults.objects.get(user=self.user).last_locality, 'Suba')
+
+        otro = Module.objects.create(
+            name='Nivel 2', semester='Segundo Semestre de 2026', modality='Virtual',
+            enrollment_start=timezone.now() - timedelta(days=1),
+            enrollment_end=timezone.now() + timedelta(days=1),
+            class_start_date=timezone.now().date() + timedelta(days=10),
+            schedule_details='Domingos', is_active=True,
+        )
+        response = self.client.get(reverse('enroll', args=[otro.id]))
+        self.assertEqual(response.context['form'].initial['locality'], 'Suba')
+        self.assertContains(response, 'Suba')
+
+    def test_locality_field_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('locality_field'), {'city': 'Bogotá'})
+        self.assertEqual(response.status_code, 302)

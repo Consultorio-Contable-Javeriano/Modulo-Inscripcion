@@ -64,6 +64,9 @@ class UserProfile(models.Model):
     birth_date = models.DateField('Fecha de nacimiento')
     gender = models.CharField('Género', max_length=50, choices=GENDER_CHOICES) #[cite: 1, 2]
     phone = models.CharField('Teléfono', max_length=50) #[cite: 1, 2]
+    # Correo secundario opcional, pedido en el documento de levantamiento: sirve de
+    # respaldo para contactar al usuario sin reemplazar al correo de la cuenta.
+    alternate_email = models.EmailField('Correo electrónico alternativo', blank=True, null=True)
     education_level = models.CharField('Nivel educativo', max_length=100, blank=True, null=True) #[cite: 1, 2]
     has_business = models.BooleanField('Tiene negocio propio', default=False) #[cite: 1, 2]
 
@@ -86,6 +89,7 @@ class UserSavedDefaults(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='saved_defaults', verbose_name='Usuario')
     last_entity = models.CharField('Última entidad', max_length=255, blank=True, null=True) #[cite: 1, 2]
     last_city = models.CharField('Última ciudad', max_length=100, blank=True, null=True) #[cite: 1, 2]
+    last_locality = models.CharField('Última localidad o comuna', max_length=100, blank=True, null=True)
     last_neighborhood = models.CharField('Último barrio', max_length=100, blank=True, null=True) #[cite: 1, 2]
 
     class Meta:

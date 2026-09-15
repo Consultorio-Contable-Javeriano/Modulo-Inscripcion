@@ -55,6 +55,9 @@ class Enrollment(models.Model):
     chosen_modality = models.CharField('Modalidad elegida', max_length=50, choices=MODALITY_CHOICES) #[cite: 1, 2]
 
     city = models.CharField('Ciudad', max_length=100) #[cite: 1, 2]
+    # Localidad (Bogota/Barranquilla) o comuna (Medellin/Tunja/Cali/Soacha). Queda vacio
+    # en las ciudades que no usan ninguna de las dos: ver enrollments/locations.py.
+    locality = models.CharField('Localidad o comuna', max_length=100, blank=True)
     neighborhood = models.CharField('Barrio', max_length=100) #[cite: 1, 2]
 
     attendance_commitment = models.BooleanField('Compromiso de asistencia', default=False) #[cite: 1, 2]

@@ -37,6 +37,7 @@ class UserProfileForm(forms.ModelForm):
             'birth_date',
             'gender',
             'phone',
+            'alternate_email',
             'education_level',
             'has_business',
         ]

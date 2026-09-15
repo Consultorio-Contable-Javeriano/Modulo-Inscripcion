@@ -61,7 +61,7 @@ Si necesitas exponerlo en otro puerto o en la red local: `python manage.py runse
 python manage.py test
 ```
 
-33 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
+46 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
 sesión), perfil de usuario y todo el flujo de inscripción.
 
 ## Estructura
@@ -233,7 +233,44 @@ sección; ver sección 7 para los 9 restantes.
 - **Tests**: `users/tests.py` suma `LoginLockoutTests` (7 tests: bloqueo al quinto fallo, contraseña
   correcta rechazada durante el bloqueo, reinicio del contador tras un login exitoso, aislamiento entre
   cuentas, aviso previo, aviso por HTMX, vencimiento del bloqueo) y `SessionExpirationSettingsTests`
-  (2 tests) — **33 tests en total**.
+  (2 tests) — 33 tests tras esta sección; ver sección 8 para los 13 restantes.
+
+### 8. Ubicación y contacto (requisitos del documento de login)
+
+- **Campo Localidad/Comuna condicional** (`enrollments/locations.py`, archivo nuevo): `Enrollment` suma
+  el campo `locality`, cuya etiqueta cambia según la ciudad escrita — "Localidad" en Bogotá y
+  Barranquilla, "Comuna" en Medellín, Tunja, Cali y Soacha. La idea del documento es que el usuario no
+  tenga que adivinar qué término administrativo usa su ciudad.
+  - **Desviación deliberada del documento**: el documento pide una tercera variante "Barrio/Vereda" para
+    las demás ciudades, pero el formulario **ya tiene** un campo `neighborhood` ("Barrio"). Mostrar los
+    dos dejaría "Barrio" y "Barrio o vereda" juntos, que es justo la confusión que el requisito quiere
+    evitar. Por eso el campo nuevo **solo aparece** cuando la ciudad usa localidad o comuna; en el resto
+    `neighborhood` sigue cubriendo el caso. Si el stakeholder prefiere la lectura literal, el cambio está
+    aislado en `locations.py`.
+  - La etiqueta se actualiza sola vía HTMX: el widget de `city` lleva un `hx-get` a la vista
+    `locality_field` (ruta `campo-localidad/`, nueva), que devuelve
+    `templates/enrollments/components/locality_field.html` (nueva) con la etiqueta ya resuelta. El valor
+    ya escrito sobrevive al intercambio (`hx-include`).
+  - La comparación de ciudad ignora mayúsculas y tildes y acepta variantes ("bogota", "BOGOTÁ",
+    "Bogotá D.C."), porque `city` sigue siendo texto libre. Si algún día se vuelve una lista desplegable,
+    `locations.py` se simplifica.
+  - Obligatoriedad condicional: `EnrollmentForm.clean()` exige el campo solo cuando la ciudad usa
+    localidad o comuna, y descarta el valor si el usuario cambió de ciudad a mitad del formulario.
+  - `UserSavedDefaults` suma `last_locality`, así que el campo entra en el autocompletado ("Lazy
+    Loading") igual que entidad, ciudad y barrio.
+- **Correo electrónico alternativo**: `UserProfile.alternate_email` (opcional) y su campo en
+  `UserProfileForm`. Es un correo de respaldo para contactar al usuario; no reemplaza al de la cuenta ni
+  sirve para iniciar sesión.
+- **Migraciones**: `enrollments/migrations/0004_enrollment_locality.py` y
+  `users/migrations/0003_userprofile_alternate_email_and_more.py`. Las tres columnas son opcionales, así
+  que no requieren valores por defecto ni tocan los registros existentes.
+- **Tests**: `enrollments/tests.py` suma `LocalityFieldTests` (10 tests: etiqueta por ciudad, campo
+  oculto donde no aplica, tolerancia a tildes/mayúsculas, valor que sobrevive al intercambio de HTMX,
+  obligatoriedad condicional, descarte del valor obsoleto, autocompletado y control de acceso) y
+  `users/tests.py` suma 3 del correo alternativo — **46 tests en total**.
+  - Ojo al revisar el diff: tres tests de inscripción que ya existían usaban `city='Bogotá'` sin
+    localidad. Se les agregó el campo; dos de ellos habrían seguido pasando, pero por el motivo
+    equivocado (por falta de localidad, no por lo que querían probar).
 
 ---
 
@@ -257,18 +294,13 @@ entidad/ubicación al registrarse, solo en la primera inscripción, y precargarl
 cubiertos. Quedan pendientes estos puntos explícitos del documento que no se implementaron en esta rama:
 
 **Formulario intuitivo (usabilidad para usuarios con dificultad para insertar información):**
-- **Campo dinámico Localidad/Comuna según ciudad**: el documento pide un tercer campo de ubicación
-  condicional (Localidad si es Bogotá/Barranquilla, Comuna si es Medellín/Tunja/Cali/Soacha, Barrio/Vereda
-  en el resto). Hoy `Enrollment`/`UserSavedDefaults` solo tienen `city` y `neighborhood`; falta ese tercer
-  campo condicional pensado para que el usuario no tenga que adivinar qué término administrativo usar.
 - **Entidad como lista desplegable con opción "Otra"**: el documento especifica una lista curada de
   entidades (fundaciones, colegios, parroquias, etc.) con una opción "Otra" de texto libre solo como
   fallback. Hoy `entity` es siempre un campo de texto libre, lo que es más difícil de usar para alguien
   con baja alfabetización digital que elegir de una lista.
-
-**Modelo de datos incompleto:**
-- **Correo electrónico alternativo (opcional)** en `UserProfile`: el documento lo pide explícitamente
-  junto al correo principal; no existe ese campo hoy (`CustomUser.email` es el único correo almacenado).
+  - **Bloqueado**: el README no enumera las entidades concretas y el PDF no está en el repositorio, así
+    que falta la lista real. La mecánica (desplegable + "Otra" + campo libre condicional) es la misma que
+    ya quedó implementada para localidad/comuna, así que es sobre todo trabajo de datos, no de código.
 
 **Nota (menor prioridad, no era un requisito firme):** el documento también exploró verificar
 correo/teléfono una vez durante el registro, pero el propio stakeholder reconoció la barrera tecnológica

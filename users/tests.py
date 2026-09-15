@@ -97,6 +97,33 @@ class ProfileTests(TestCase):
         self.assertRedirects(response, reverse('portal_home'))
         self.assertTrue(UserProfile.objects.filter(user=self.user, full_name='Usuario de Prueba').exists())
 
+    def test_alternate_email_is_optional(self):
+        response = self.client.post(reverse('complete_profile'), {
+            'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '123456789',
+            'birth_date': '2000-01-01', 'gender': 'Otro', 'phone': '3000000000',
+            'education_level': 'Universitario', 'alternate_email': '',
+        }, follow=True)
+
+        self.assertRedirects(response, reverse('portal_home'))
+        self.assertFalse(UserProfile.objects.get(user=self.user).alternate_email)
+
+    def test_alternate_email_is_saved_when_provided(self):
+        self.client.post(reverse('complete_profile'), {
+            'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '123456789',
+            'birth_date': '2000-01-01', 'gender': 'Otro', 'phone': '3000000000',
+            'education_level': 'Universitario', 'alternate_email': 'respaldo@example.com',
+        })
+        self.assertEqual(UserProfile.objects.get(user=self.user).alternate_email, 'respaldo@example.com')
+
+    def test_alternate_email_must_be_a_valid_address(self):
+        response = self.client.post(reverse('complete_profile'), {
+            'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '123456789',
+            'birth_date': '2000-01-01', 'gender': 'Otro', 'phone': '3000000000',
+            'education_level': 'Universitario', 'alternate_email': 'esto-no-es-un-correo',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(UserProfile.objects.filter(user=self.user).exists())
+
     def test_edit_existing_profile(self):
         UserProfile.objects.create(
             user=self.user, full_name='Nombre Viejo', id_type='CC', id_number='987654321',

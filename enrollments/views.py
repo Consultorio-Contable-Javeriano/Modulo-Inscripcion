@@ -45,6 +45,7 @@ def enroll(request, module_id):
         initial = {
             'entity': defaults.last_entity,
             'city': defaults.last_city,
+            'locality': defaults.last_locality,
             'neighborhood': defaults.last_neighborhood,
         }
 
@@ -65,6 +66,7 @@ def enroll(request, module_id):
                 defaults={
                     'last_entity': enrollment.entity,
                     'last_city': enrollment.city,
+                    'last_locality': enrollment.locality,
                     'last_neighborhood': enrollment.neighborhood,
                 },
             )
@@ -75,6 +77,20 @@ def enroll(request, module_id):
         form = EnrollmentForm(module=module, initial=initial)
 
     return render(request, 'enrollments/enroll_form.html', {'form': form, 'module': module})
+
+
+@login_required
+def locality_field(request):
+    """Devuelve el campo de localidad/comuna ya ajustado a la ciudad escrita.
+
+    Lo pide HTMX cada vez que cambia el campo "Ciudad", para que la etiqueta diga
+    "Localidad" o "Comuna" segun corresponda, o el campo desaparezca si no aplica.
+    """
+    form = EnrollmentForm(initial={
+        'city': request.GET.get('city', ''),
+        'locality': request.GET.get('locality', ''),
+    })
+    return render(request, 'enrollments/components/locality_field.html', {'form': form})
 
 
 @login_required
