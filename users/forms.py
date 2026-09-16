@@ -3,6 +3,7 @@ from datetime import date
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import CustomUser, UserProfile
 
@@ -18,6 +19,27 @@ def _style_widgets(fields):
             field.widget.attrs['class'] = TEXT_INPUT_CLASSES
 
 
+class LoginForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _style_widgets(self.fields)
+        if 'username' in self.fields:
+            self.fields['username'].label = 'Correo electrónico'
+            self.fields['username'].widget = forms.EmailInput(attrs={
+                'class': TEXT_INPUT_CLASSES,
+                'placeholder': 'nombre@ejemplo.com',
+                'autocomplete': 'email',
+                'id': 'id_username',
+            })
+        if 'password' in self.fields:
+            self.fields['password'].widget.attrs.update({
+                'class': TEXT_INPUT_CLASSES + ' pr-10',
+                'placeholder': '••••••••',
+                'autocomplete': 'current-password',
+                'id': 'id_password',
+            })
+
+
 class SignupForm(UserCreationForm):
     class Meta:
         model = CustomUser
@@ -28,6 +50,23 @@ class SignupForm(UserCreationForm):
         for field in self.fields.values():
             field.help_text = None
         _style_widgets(self.fields)
+        if 'email' in self.fields:
+            self.fields['email'].widget.attrs.update({
+                'placeholder': 'nombre@ejemplo.com',
+                'autocomplete': 'email',
+            })
+        if 'password1' in self.fields:
+            self.fields['password1'].widget.attrs.update({
+                'class': self.fields['password1'].widget.attrs.get('class', '') + ' pr-10',
+                'placeholder': '••••••••',
+                'autocomplete': 'new-password',
+            })
+        if 'password2' in self.fields:
+            self.fields['password2'].widget.attrs.update({
+                'class': self.fields['password2'].widget.attrs.get('class', '') + ' pr-10',
+                'placeholder': '••••••••',
+                'autocomplete': 'new-password',
+            })
 
         self.fields['email'].widget.attrs.update({
             'autocomplete': 'email',

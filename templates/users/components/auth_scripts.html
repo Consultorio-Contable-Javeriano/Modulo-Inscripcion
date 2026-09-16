@@ -1,0 +1,334 @@
+<script>
+(function() {
+    const COMMON_DOMAINS = [
+        'gmail.com',
+        'javeriana.edu.co',
+        'hotmail.com',
+        'outlook.com',
+        'yahoo.com'
+    ];
+
+    const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+    /**
+     * Diagnóstico granular del correo electrónico.
+     * Devuelve el mensaje descriptivo exacto de qué le falta o qué error tiene el correo.
+     * Si es válido, devuelve null.
+     */
+    function getEmailValidationError(value) {
+        const raw = value || '';
+        const trimmed = raw.trim();
+
+        if (!trimmed) {
+            return 'Por favor ingresa tu correo electrónico.';
+        }
+
+        if (/\s/.test(raw)) {
+            return 'El correo electrónico no debe contener espacios.';
+        }
+
+        if (!trimmed.includes('@')) {
+            return "Falta el símbolo '@' en el correo electrónico.";
+        }
+
+        const atParts = trimmed.split('@');
+        if (atParts.length > 2) {
+            return "El correo solo puede contener un símbolo '@'.";
+        }
+
+        const username = atParts[0];
+        const domain = atParts[1];
+
+        if (!username) {
+            return "Falta el nombre de usuario antes del '@' (ej. usuario@ejemplo.com).";
+        }
+
+        if (!domain) {
+            return "Falta el dominio después del '@' (ej. gmail.com, javeriana.edu.co).";
+        }
+
+        if (domain.startsWith('.')) {
+            return "El dominio no puede comenzar con un punto '.'; indica el nombre del proveedor (ej. gmail.com).";
+        }
+
+        if (domain.endsWith('.')) {
+            return "Falta la extensión del dominio después del punto '.' (ej. .com, .co, .edu.co).";
+        }
+
+        if (domain.includes('..')) {
+            return "El dominio no puede tener dos puntos consecutivos.";
+        }
+
+        if (!domain.includes('.')) {
+            return "Falta un punto '.' en el dominio después del '@' (ej. " + domain + ".com o " + domain + ".co).";
+        }
+
+        const domainLabels = domain.split('.');
+        const lastLabel = domainLabels[domainLabels.length - 1];
+
+        if (!lastLabel) {
+            return "Falta la extensión final del dominio (ej. .com, .co, .edu.co).";
+        }
+
+        if (lastLabel.length < 2) {
+            return "La extensión del dominio debe tener al menos 2 letras (ej. .com, .co).";
+        }
+
+        if (!/^[a-zA-Z]+$/.test(lastLabel)) {
+            return "La extensión del dominio solo puede contener letras.";
+        }
+
+        // Verificación completa con Regex RFC 5322
+        if (!EMAIL_REGEX.test(trimmed)) {
+            return "El formato del correo electrónico no es válido (ej. usuario@ejemplo.com).";
+        }
+
+        return null;
+    }
+
+    /**
+     * Configura la verificación de email y las sugerencias de dominios para un campo específico.
+     */
+    function setupEmailEnhancer(config) {
+        const input = document.getElementById(config.inputId);
+        const suggBox = document.getElementById(config.suggestionsId);
+        const errBox = document.getElementById(config.errorId);
+        const form = document.getElementById(config.formId);
+
+        if (!input || !suggBox || !errBox) return;
+
+        // Evitar doble inicialización sobre el mismo elemento del DOM
+        if (input.dataset.authEnhancerReady === 'true') return;
+        input.dataset.authEnhancerReady = 'true';
+
+        const errText = errBox.querySelector('.email-error-text');
+        const chipsContainer = suggBox.querySelector('.domain-chips-container');
+
+        function showError(msg) {
+            if (errText) errText.textContent = msg;
+            errBox.classList.remove('hidden');
+            input.classList.remove('border-gray-300', 'focus:ring-javblue');
+            input.classList.add('border-red-500', 'focus:ring-red-400', 'focus:border-red-500');
+            input.setAttribute('aria-invalid', 'true');
+        }
+
+        function clearError() {
+            errBox.classList.add('hidden');
+            if (errText) errText.textContent = '';
+            input.classList.remove('border-red-500', 'focus:ring-red-400', 'focus:border-red-500');
+            input.classList.add('border-gray-300', 'focus:ring-javblue');
+            input.removeAttribute('aria-invalid');
+        }
+
+        function hideSuggestions() {
+            suggBox.classList.add('hidden');
+        }
+
+        function updateSuggestions() {
+            const rawVal = input.value;
+            const val = rawVal.trim();
+
+            if (!val) {
+                hideSuggestions();
+                return;
+            }
+
+            let matches = [];
+            let username = val;
+
+            if (val.includes('@')) {
+                const parts = val.split('@');
+                username = parts[0];
+                const domainQuery = (parts[1] || '').toLowerCase();
+
+                if (parts.length > 2) {
+                    hideSuggestions();
+                    return;
+                }
+
+                // Filtrar sugerencias que comiencen con lo que el usuario ha escrito después del @
+                matches = COMMON_DOMAINS.filter(function(d) {
+                    return d.startsWith(domainQuery) && d !== domainQuery;
+                });
+            } else {
+                // Si aún no escribe @, sugerir los dominios más comunes
+                matches = COMMON_DOMAINS;
+            }
+
+            if (matches.length === 0 || !chipsContainer) {
+                hideSuggestions();
+                return;
+            }
+
+            // Construir los botones/chips de sugerencia
+            chipsContainer.innerHTML = '';
+            matches.forEach(function(domain) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'domain-chip inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded bg-white text-javnavy border border-blue-300 hover:bg-javblue hover:text-white hover:border-javblue transition-all shadow-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-javblue';
+                btn.setAttribute('data-domain', domain);
+                btn.setAttribute('title', 'Completar con @' + domain);
+                btn.textContent = '@' + domain;
+                chipsContainer.appendChild(btn);
+            });
+
+            suggBox.classList.remove('hidden');
+        }
+
+        // Eventos en el input
+        input.addEventListener('focus', function() {
+            updateSuggestions();
+        });
+
+        input.addEventListener('input', function() {
+            updateSuggestions();
+
+            // Si ya se disparó la validación por blur anteriormente, dar feedback en tiempo real
+            if (input.dataset.hasBlurred === 'true') {
+                const err = getEmailValidationError(input.value);
+                if (err) {
+                    showError(err);
+                } else {
+                    clearError();
+                }
+            }
+        });
+
+        // Al cambiar al siguiente campo o salir del foco (blur)
+        input.addEventListener('blur', function() {
+            // Retardo breve para permitir que el clic en los chips de sugerencia se procese primero
+            setTimeout(hideSuggestions, 200);
+
+            input.dataset.hasBlurred = 'true';
+            const err = getEmailValidationError(input.value);
+            if (err) {
+                showError(err);
+            } else {
+                clearError();
+            }
+        });
+
+        // Prevenir que el mousedown en el contenedor de sugerencias cause un blur anticipado
+        suggBox.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+        });
+
+        // Clic en un chip de sugerencia para autocompletar
+        suggBox.addEventListener('click', function(e) {
+            const btn = e.target.closest('.domain-chip');
+            if (!btn) return;
+
+            const domain = btn.getAttribute('data-domain');
+            const curVal = input.value.trim();
+            const userPart = curVal.includes('@') ? curVal.split('@')[0] : curVal;
+
+            input.value = (userPart || '') + '@' + domain;
+            hideSuggestions();
+            input.dataset.hasBlurred = 'true';
+            clearError();
+
+            // Despachar evento para sincronizar cualquier otro listener
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Mover el foco al siguiente campo si está especificado
+            if (config.nextFieldId) {
+                const nextEl = document.getElementById(config.nextFieldId);
+                if (nextEl) {
+                    nextEl.focus();
+                    return;
+                }
+            }
+            input.focus();
+        });
+
+        // Validación al enviar el formulario
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                input.dataset.hasBlurred = 'true';
+                const err = getEmailValidationError(input.value);
+                if (err) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof e.stopImmediatePropagation === 'function') {
+                        e.stopImmediatePropagation();
+                    }
+                    showError(err);
+                    input.focus();
+                }
+            }, true); // Capturing phase para ejecutar antes que HTMX u otros listeners
+        }
+    }
+
+    /**
+     * Inicializa los formularios de autenticación disponibles en la página.
+     */
+    function initAuthFeatures() {
+        // 1. Formulario de Inicio de Sesión
+        setupEmailEnhancer({
+            inputId: 'id_username',
+            suggestionsId: 'login-email-suggestions',
+            errorId: 'login-email-error',
+            formId: 'login-form',
+            nextFieldId: 'id_password'
+        });
+
+        // 2. Formulario de Registro
+        setupEmailEnhancer({
+            inputId: 'id_email',
+            suggestionsId: 'signup-email-suggestions',
+            errorId: 'signup-email-error',
+            formId: 'signup-form',
+            nextFieldId: 'id_password1'
+        });
+    }
+
+    // Manejo global con delegación para el botón de visualizar / ocultar contraseña
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.toggle-password-btn');
+        if (!btn) return;
+
+        e.preventDefault();
+        const targetId = btn.getAttribute('data-toggle-password');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+
+        const isCurrentlyPassword = input.type === 'password';
+        input.type = isCurrentlyPassword ? 'text' : 'password';
+
+        const eyeOpen = btn.querySelector('.eye-open');
+        const eyeClosed = btn.querySelector('.eye-closed');
+
+        if (eyeOpen && eyeClosed) {
+            if (isCurrentlyPassword) {
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
+                btn.setAttribute('aria-label', 'Ocultar contraseña');
+                btn.setAttribute('title', 'Ocultar contraseña');
+            } else {
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
+                btn.setAttribute('aria-label', 'Mostrar contraseña');
+                btn.setAttribute('title', 'Mostrar contraseña');
+            }
+        }
+
+        input.focus();
+    });
+
+    // Ejecutar en carga inicial
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAuthFeatures);
+    } else {
+        initAuthFeatures();
+    }
+
+    // Ejecutar tras swaps de HTMX (especialmente login con errores devuelto vía HTMX)
+    document.addEventListener('htmx:afterSwap', function() {
+        initAuthFeatures();
+    });
+    document.addEventListener('htmx:load', function() {
+        initAuthFeatures();
+    });
+})();
+</script>
+

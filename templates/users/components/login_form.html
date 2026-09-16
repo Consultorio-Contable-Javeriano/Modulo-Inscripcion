@@ -1,4 +1,5 @@
-<form hx-post="{% url 'login' %}" hx-target="#login-form-wrapper" hx-swap="innerHTML" class="space-y-4 [&_input]:w-full [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-sm [&_input]:px-3 [&_input]:py-2 [&_input]:mt-1 [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-javblue">
+
+<form hx-post="{% url 'login' %}" hx-target="#login-form-wrapper" hx-swap="innerHTML" id="login-form" novalidate class="space-y-4 [&_input]:w-full [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-sm [&_input]:px-3 [&_input]:py-2 [&_input]:mt-1 [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-javblue">
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
@@ -18,15 +19,54 @@
 
     <div class="flex flex-col">
         <label for="id_username" class="text-sm font-medium text-gray-700">Correo electrónico</label>
-        {{ form.username }}
+        
+        <div class="relative">
+            {{ form.username }}
+        </div>
+
+        <!-- Contenedor de sugerencias de dominios más comunes -->
+        <div id="login-email-suggestions" class="hidden mt-1.5 p-2.5 bg-blue-50/90 border border-blue-200 rounded-md">
+            <span class="block text-[11px] font-semibold text-javnavy mb-1.5">Sugerencias de dominio (clic para autocompletar):</span>
+            <div class="flex flex-wrap gap-1.5 domain-chips-container"></div>
+        </div>
+
+        <!-- Mensaje de error dinámico con diagnóstico de qué falta en el correo -->
+        <div id="login-email-error" class="hidden mt-1.5 text-xs text-red-700 bg-red-50 border border-red-200 p-2 rounded-md flex items-start gap-1.5">
+            <svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <span class="email-error-text"></span>
+        </div>
+
+        {% for error in form.username.errors %}
+        <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+        {% endfor %}
     </div>
 
     <div class="flex flex-col">
         <label for="id_password" class="text-sm font-medium text-gray-700">Contraseña</label>
-        {{ form.password }}
+        
+        <div class="relative">
+            {{ form.password }}
+            <button type="button" data-toggle-password="id_password" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-javnavy focus:outline-none transition-colors cursor-pointer" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+                <!-- Ícono Ojo Abierto -->
+                <svg class="eye-open h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <!-- Ícono Ojo Cerrado / Tachado -->
+                <svg class="eye-closed h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                </svg>
+            </button>
+        </div>
+        {% for error in form.password.errors %}
+        <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+        {% endfor %}
     </div>
 
     <button type="submit" class="w-full bg-javblue text-white font-semibold uppercase text-sm tracking-wide p-2.5 rounded-sm hover:bg-javnavy transition-colors">
         Iniciar sesión
     </button>
 </form>
+

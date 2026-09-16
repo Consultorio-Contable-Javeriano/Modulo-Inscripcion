@@ -9,6 +9,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from . import security
 from .forms import SignupForm, UserProfileForm
+from .forms import LoginForm, SignupForm, UserProfileForm
 from .models import UserProfile
 
 
@@ -29,9 +30,11 @@ def login_view(request):
         if locked_seconds:
             # Cuenta bloqueada por intentos fallidos: no llegamos a autenticar siquiera.
             form = AuthenticationForm(request, initial={'username': username})
+            form = LoginForm(request, initial={'username': username})
             lockout_notice = security.lockout_notice(locked_seconds)
         else:
             form = AuthenticationForm(request, data=request.POST)
+            form = LoginForm(request, data=request.POST)
             if form.is_valid():
                 security.reset_attempts(username)
                 login(request, form.get_user())
@@ -58,6 +61,7 @@ def login_view(request):
 
     # Si entra por primera vez a la página de login
     return render(request, 'users/login.html', {'form': AuthenticationForm(), 'next': request.GET.get('next', '')})
+    return render(request, 'users/login.html', {'form': LoginForm(), 'next': request.GET.get('next', '')})
 
 
 def signup_view(request):
