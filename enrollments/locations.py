@@ -30,6 +30,19 @@ _CITY_DIVISIONS = {
 }
 
 
+# Ciudades que ofrece el buscador del formulario: las capitales de departamento mas los
+# municipios que el documento de levantamiento menciona por nombre. NO es una lista cerrada:
+# el campo sigue aceptando cualquier municipio escrito a mano, para no dejar por fuera a
+# quien vive en uno pequeno.
+CITIES = [
+    'Arauca', 'Armenia', 'Barranquilla', 'Bogotá', 'Bucaramanga', 'Cali', 'Cartagena',
+    'Cúcuta', 'Florencia', 'Ibagué', 'Inírida', 'Leticia', 'Manizales', 'Medellín',
+    'Mitú', 'Mocoa', 'Montería', 'Neiva', 'Pasto', 'Pereira', 'Popayán', 'Puerto Carreño',
+    'Quibdó', 'Riohacha', 'San Andrés', 'San José del Guaviare', 'Santa Marta', 'Sincelejo',
+    'Soacha', 'Sogamoso', 'Tunja', 'Valledupar', 'Villavicencio', 'Yopal',
+]
+
+
 def normalize_city(city):
     """Minúsculas, sin tildes ni puntos, para comparar lo que el usuario escribió."""
     if not city:

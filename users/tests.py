@@ -270,3 +270,54 @@ class SessionExpirationSettingsTests(TestCase):
         response = self.client.get(reverse('portal_home'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.cookies['sessionid']['max-age'], settings.SESSION_COOKIE_AGE)
+
+
+class ProfileValidationTests(TestCase):
+    """Validacion estricta de documento y telefono (usabilidad del formulario)."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(email='usuario@example.com', password='clave-segura123')
+        self.client.login(email='usuario@example.com', password='clave-segura123')
+
+    def _payload(self, **overrides):
+        data = {
+            'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '1098765432',
+            'birth_date': '1990-05-20', 'gender': 'Otro', 'phone': '3001234567',
+            'education_level': 'Técnico', 'alternate_email': '',
+        }
+        data.update(overrides)
+        return data
+
+    def test_document_rejects_letters(self):
+        response = self.client.post(reverse('complete_profile'), self._payload(id_number='10A98765'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response.context['form'], 'id_number',
+                             'El número de documento debe tener solo dígitos, sin puntos ni espacios.')
+
+    def test_document_rejects_too_short(self):
+        response = self.client.post(reverse('complete_profile'), self._payload(id_number='12345'))
+        self.assertFormError(response.context['form'], 'id_number',
+                             'El número de documento debe tener entre 6 y 10 dígitos; escribiste 5.')
+
+    def test_passport_allows_letters(self):
+        self.client.post(reverse('complete_profile'), self._payload(id_type='PA', id_number='AX1234567'))
+        self.assertEqual(UserProfile.objects.get(user=self.user).id_number, 'AX1234567')
+
+    def test_phone_accepts_spaces_and_country_code(self):
+        self.client.post(reverse('complete_profile'), self._payload(phone='+57 300 123 4567'))
+        # Se guarda normalizado: el usuario puede escribirlo como le resulte natural.
+        self.assertEqual(UserProfile.objects.get(user=self.user).phone, '3001234567')
+
+    def test_phone_rejects_ten_digits_not_starting_with_three(self):
+        response = self.client.post(reverse('complete_profile'), self._payload(phone='6011234567'))
+        self.assertFormError(response.context['form'], 'phone',
+                             'Un número de 10 dígitos es un celular y debe empezar por 3. Si es un fijo, escribe sus 7 dígitos.')
+
+    def test_phone_accepts_landline(self):
+        self.client.post(reverse('complete_profile'), self._payload(phone='245-6789'))
+        self.assertEqual(UserProfile.objects.get(user=self.user).phone, '2456789')
+
+    def test_phone_rejects_wrong_length(self):
+        response = self.client.post(reverse('complete_profile'), self._payload(phone='30012'))
+        self.assertFormError(response.context['form'], 'phone',
+                             'Escribe un celular de 10 dígitos o un fijo de 7; escribiste 5 dígitos.')

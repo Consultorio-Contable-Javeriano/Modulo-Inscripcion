@@ -61,8 +61,8 @@ Si necesitas exponerlo en otro puerto o en la red local: `python manage.py runse
 python manage.py test
 ```
 
-49 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
-sesión), perfil de usuario y todo el flujo de inscripción.
+57 tests cubren autenticación (login, logout, registro, bloqueo por intentos fallidos, expiración de
+sesión), perfil de usuario con sus validaciones y todo el flujo de inscripción.
 
 ## Estructura
 
@@ -300,7 +300,8 @@ problemas que la suite no podía ver:
   `{% comment %}`.
 - **Tests**: 3 de regresión — el comentario no se filtra a la página, el valor sobrevive mientras el campo
   está oculto, y el invariante de estructura del login por HTMX (el cliente de pruebas no ejecuta HTMX,
-  así que se protege la estructura y no el comportamiento) — **49 tests en total**.
+  así que se protege la estructura y no el comportamiento) — 49 tests tras esta sección; ver sección 10
+  para los 8 restantes.
 - **Observaciones de la validación, sin corregir**:
   - Al cambiar de ciudad se conserva lo escrito en localidad/comuna. Ayuda si el usuario solo corrige el
     nombre de la ciudad, pero puede arrastrar un valor sin sentido (p. ej. "Suba" quedando como comuna de
@@ -309,6 +310,43 @@ problemas que la suite no podía ver:
     campo). Inofensivo, pero redundante.
   - "Correo electrónico alternativo" y "Tiene negocio propio" son campos independientes del perfil: el
     correo alternativo se muestra siempre y no depende de la casilla.
+
+### 10. Usabilidad de los formularios
+
+Pedido: que el formulario sea intuitivo para gente con poca práctica digital.
+
+- **Registro en dos pasos visibles**: `templates/components/step_indicator.html` (nuevo) muestra "Paso 1 de 2"
+  en el registro y "Paso 2 de 2" al completar el perfil, con el primer paso marcado como completado.
+  Reemplaza al rótulo decorativo que había sobre los títulos ("Consultorio Contable", "Mi cuenta"), que no
+  aportaba información.
+- **Correo**: `autocomplete="email"` y `new-password` en las contraseñas, para que el navegador ofrezca lo
+  que ya tiene guardado sin rellenar la clave de otra cuenta. Además, al escribir `juan@g` aparecen botones
+  para completar con los dominios más usados.
+- **Documento y teléfono con validación estricta por tipo** (`UserProfileForm.clean_id_number` y
+  `clean_phone`): cédula y tarjeta de identidad solo dígitos, 6 a 10; pasaporte 5 a 15 alfanumérico;
+  celular de 10 dígitos que empiece por 3, fijo de 7. El teléfono se normaliza: acepta espacios, guiones,
+  paréntesis y prefijo `+57`, y guarda solo los dígitos. En la página hay avisos en vivo (`aria-live`) que
+  dicen cuántos dígitos faltan y se limpian los caracteres que el servidor rechazaría; **la validación que
+  manda sigue siendo la del servidor**.
+- **Ciudad con buscador**: `locations.CITIES` (34 entradas: capitales de departamento más los municipios que
+  nombra el documento) alimenta un `<datalist>`, así ya no hay que escribirla a ciegas. El campo **sigue
+  aceptando texto libre**, para no dejar fuera a quien vive en un municipio pequeño, y la etiqueta
+  condicional Localidad/Comuna de la sección 8 funciona igual.
+- **Superficies del navegador** en `base.html`: selección, cursor, anillo de foco y `accent-color` de las
+  casillas alineados con la paleta, y 16px en móvil para evitar el zoom forzado de iOS al enfocar un campo.
+- **Desbordamiento en móvil corregido (bug previo)**: a 390px el header con sesión iniciada medía 533px, se
+  salía de la pantalla y "Mi perfil" quedaba tapado por el botón de cerrar sesión. Ahora la fila y la
+  navegación fluyen: 375px, sin scroll horizontal y con los 5 elementos visibles.
+- **Bug propio corregido durante la verificación**: con el tipo de documento sin elegir —el estado inicial
+  de cualquier usuario nuevo— la validación en vivo caía en la rama de pasaporte: no limpiaba las letras y
+  daba por bueno un documento de 5 dígitos. El tipo vacío ahora se trata como numérico.
+- **Detector de diseño**: 6 avisos, todos sobre la identidad visual heredada (el borde dorado `border-t-4`
+  de las tarjetas, el `border-l-4` de los mensajes y la escala tipográfica de `base.html`); ninguno en los
+  archivos nuevos. No se tocaron: refinar preserva la identidad existente, y rediseñar la tarjeta de marca
+  no era parte del encargo. El detector corrió en modo degradado (sin parser HTML), así que subestima.
+- **Tests**: 49 → **57** (7 de validación de documento y teléfono, 1 del buscador de ciudad). Los avisos en
+  vivo y la sugerencia de dominio son JavaScript en línea, que el cliente de pruebas de Django no ejecuta:
+  esos se verificaron en el navegador con Playwright.
 
 ---
 

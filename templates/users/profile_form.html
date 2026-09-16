@@ -2,11 +2,12 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto py-10 px-4">
-    <p class="text-xs font-bold uppercase tracking-wide text-javblue mb-1">Mi cuenta</p>
     <h1 class="text-2xl font-extrabold text-javnavy mb-1">
         {% if is_new %}Completa tu perfil{% else %}Editar mi perfil{% endif %}
     </h1>
     <p class="text-gray-600 mb-6">Esta información se usa para tus inscripciones a los módulos.</p>
+
+    {% if is_new %}{% include 'components/step_indicator.html' with paso=2 %}{% endif %}
 
     <form method="post" class="space-y-4 bg-white p-6 rounded-xl shadow-sm border-t-4 border-javgold">
         {% csrf_token %}
@@ -22,6 +23,12 @@
                 {{ field }}
             </div>
             {% endif %}
+            {% if field.help_text %}
+            <p class="text-xs text-gray-500 mt-1" data-ayuda="{{ field.name }}">{{ field.help_text }}</p>
+            {% endif %}
+            {% if field.name == 'id_number' or field.name == 'phone' %}
+            <p class="text-xs mt-1 hidden" data-aviso="{{ field.name }}" aria-live="polite"></p>
+            {% endif %}
             {% for error in field.errors %}
             <p class="text-sm text-red-600 mt-1">{{ error }}</p>
             {% endfor %}
@@ -32,4 +39,73 @@
         </button>
     </form>
 </div>
+
+<script>
+    // Avisos mientras se escribe. Quien manda es la validacion del servidor
+    // (UserProfileForm.clean_id_number / clean_phone); esto solo evita llegar al error.
+    (function () {
+        var tipo = document.getElementById('id_id_type');
+        var documento = document.getElementById('id_id_number');
+        var telefono = document.getElementById('id_phone');
+        var NUMERICOS = ['CC', 'CE', 'TI'];
+
+        function aviso(campo, texto, tono) {
+            var p = document.querySelector('[data-aviso="' + campo + '"]');
+            if (!p) { return; }
+            p.textContent = texto || '';
+            p.classList.toggle('hidden', !texto);
+            p.classList.toggle('text-amber-700', tono === 'falta');
+            p.classList.toggle('text-green-700', tono === 'ok');
+        }
+
+        function ayudaDocumento() {
+            var p = document.querySelector('[data-ayuda="id_number"]');
+            if (!p || !tipo) { return; }
+            p.textContent = tipo.value === 'PA'
+                ? 'Letras y números, entre 5 y 15 caracteres.'
+                : 'Solo números, entre 6 y 10 dígitos, sin puntos ni espacios.';
+        }
+
+        function revisarDocumento() {
+            if (!documento) { return; }
+            // Sin tipo elegido (estado inicial) tratamos el documento como numerico: es el caso
+            // mayoritario y coincide con la ayuda que ya se muestra por defecto.
+            var esNumerico = !tipo || !tipo.value || NUMERICOS.indexOf(tipo.value) !== -1;
+            if (esNumerico) {
+                var limpio = documento.value.replace(/[^0-9]/g, '').slice(0, 10);
+                if (limpio !== documento.value) { documento.value = limpio; }
+            }
+            var valor = documento.value.trim();
+            if (!valor) { return aviso('id_number', ''); }
+            if (esNumerico && valor.length < 6) {
+                return aviso('id_number', 'Faltan dígitos: llevas ' + valor.length + ' de mínimo 6.', 'falta');
+            }
+            if (!esNumerico && !/^[A-Za-z0-9]{5,15}$/.test(valor)) {
+                return aviso('id_number', 'El pasaporte usa entre 5 y 15 letras o números.', 'falta');
+            }
+            aviso('id_number', 'Documento completo.', 'ok');
+        }
+
+        function revisarTelefono() {
+            if (!telefono) { return; }
+            var digitos = telefono.value.replace(/[^0-9]/g, '');
+            if (!digitos) { return aviso('phone', ''); }
+            if (digitos.length === 10 && digitos.charAt(0) !== '3') {
+                return aviso('phone', 'Un número de 10 dígitos es un celular y empieza por 3.', 'falta');
+            }
+            if (digitos.length === 7 || digitos.length === 10) {
+                return aviso('phone', digitos.length === 7 ? 'Teléfono fijo completo.' : 'Celular completo.', 'ok');
+            }
+            if (digitos.length < 7) {
+                return aviso('phone', 'Llevas ' + digitos.length + ' dígitos: un fijo tiene 7 y un celular 10.', 'falta');
+            }
+            aviso('phone', 'Llevas ' + digitos.length + ' dígitos: un celular tiene 10.', 'falta');
+        }
+
+        if (tipo) { tipo.addEventListener('change', function () { ayudaDocumento(); revisarDocumento(); }); }
+        if (documento) { documento.addEventListener('input', revisarDocumento); }
+        if (telefono) { telefono.addEventListener('input', revisarTelefono); }
+        ayudaDocumento();
+    })();
+</script>
 {% endblock %}

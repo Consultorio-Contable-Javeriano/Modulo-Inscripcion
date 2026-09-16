@@ -291,6 +291,15 @@ class LocalityFieldTests(TestCase):
             self.assertNotContains(response, '{#', msg_prefix=url)
             self.assertNotContains(response, '{% comment', msg_prefix=url)
 
+    def test_city_offers_a_searchable_list(self):
+        # El usuario ya no tiene que escribir la ciudad a ciegas: el campo trae un buscador,
+        # pero sigue aceptando texto libre para quien vive en un municipio que no esta en la lista.
+        response = self.client.get(reverse('enroll', args=[self.module.id]))
+        self.assertContains(response, 'list="lista-ciudades"')
+        self.assertContains(response, '<datalist id="lista-ciudades">')
+        self.assertContains(response, '<option value="Medellín">')
+        self.assertContains(response, '<option value="Soacha">')
+
     def test_locality_field_requires_login(self):
         self.client.logout()
         response = self.client.get(reverse('locality_field'), {'city': 'Bogotá'})

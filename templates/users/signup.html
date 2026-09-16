@@ -4,10 +4,11 @@
 <div class="min-h-[80vh] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-6 bg-white p-8 rounded-xl shadow-lg border-t-4 border-javgold">
         <div>
-            <p class="text-xs font-bold uppercase tracking-wide text-javblue mb-1">Consultorio Contable</p>
             <h2 class="text-3xl font-extrabold text-javnavy">Crear una cuenta</h2>
-            <p class="mt-2 text-sm text-gray-600">Regístrate para inscribirte a los módulos disponibles</p>
+            <p class="mt-2 text-sm text-gray-600">Primero tu correo y una contraseña. Después te pedimos tus datos.</p>
         </div>
+
+        {% include 'components/step_indicator.html' with paso=1 %}
 
         <form method="post" class="space-y-4">
             {% csrf_token %}
@@ -24,6 +25,9 @@
                 {% for error in field.errors %}
                 <p class="text-sm text-red-600 mt-1">{{ error }}</p>
                 {% endfor %}
+                {% if field.name == 'email' %}
+                <div id="sugerencias-correo" class="flex flex-wrap gap-2 mt-2" aria-live="polite"></div>
+                {% endif %}
             </div>
             {% endfor %}
 
@@ -37,4 +41,40 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Sugerencia de dominio: al escribir "juan@g" ofrece completar con los correos mas usados.
+    (function () {
+        var campo = document.getElementById('id_email');
+        var caja = document.getElementById('sugerencias-correo');
+        if (!campo || !caja) { return; }
+
+        var DOMINIOS = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'javeriana.edu.co'];
+
+        campo.addEventListener('input', function () {
+            var valor = campo.value.trim();
+            var corte = valor.indexOf('@');
+            caja.textContent = '';
+            if (corte < 1) { return; }
+
+            var usuario = valor.slice(0, corte);
+            var escrito = valor.slice(corte + 1).toLowerCase();
+
+            DOMINIOS.filter(function (d) { return d.indexOf(escrito) === 0 && d !== escrito; })
+                .slice(0, 3)
+                .forEach(function (dominio) {
+                    var boton = document.createElement('button');
+                    boton.type = 'button';
+                    boton.className = 'text-xs px-2.5 py-1 rounded-full border border-javblue/40 text-javblue hover:bg-javblue hover:text-white transition-colors';
+                    boton.textContent = usuario + '@' + dominio;
+                    boton.addEventListener('click', function () {
+                        campo.value = usuario + '@' + dominio;
+                        caja.textContent = '';
+                        campo.focus();
+                    });
+                    caja.appendChild(boton);
+                });
+        });
+    })();
+</script>
 {% endblock %}

@@ -36,6 +36,30 @@ class EnrollmentForm(forms.ModelForm):
                 field.widget.attrs['class'] = TEXT_INPUT_CLASSES
 
         self._setup_locality_field()
+        self._setup_usability_hints()
+
+    def _setup_usability_hints(self):
+        """Ayudas de escritura: autocompletado del navegador y buscador de ciudad."""
+        # Lista sugerida para el <datalist> que renderiza la plantilla.
+        self.city_options = locations.CITIES
+
+        self.fields['entity'].widget.attrs.update({
+            'autocomplete': 'organization',
+            'placeholder': 'Fundación, colegio, parroquia, empresa...',
+        })
+        self.fields['entity'].help_text = 'Organización por la que llegas al consultorio. Si vienes por tu cuenta, escribe "Particular".'
+
+        self.fields['city'].widget.attrs.update({
+            'list': 'lista-ciudades',
+            'autocomplete': 'address-level2',
+            'placeholder': 'Escribe y elige tu ciudad',
+        })
+        self.fields['city'].help_text = 'Escribe las primeras letras y elige de la lista. Si tu municipio no aparece, escríbelo completo.'
+
+        self.fields['neighborhood'].widget.attrs.update({
+            'autocomplete': 'address-level3',
+            'placeholder': 'Barrio o vereda donde vives',
+        })
 
     def _current_city(self):
         if self.is_bound:
