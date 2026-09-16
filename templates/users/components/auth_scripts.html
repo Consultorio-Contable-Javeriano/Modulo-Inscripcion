@@ -195,9 +195,21 @@
         });
 
         // Al cambiar al siguiente campo o salir del foco (blur)
-        input.addEventListener('blur', function() {
+        input.addEventListener('blur', function(e) {
             // Retardo breve para permitir que el clic en los chips de sugerencia se procese primero
             setTimeout(hideSuggestions, 200);
+
+            // Si el foco se mueve a un elemento fuera del formulario (ej. enlace de navegación),
+            // no mostrar errores de validación — el usuario solo quiere cambiar de página.
+            const dest = e.relatedTarget;
+            const currentForm = form || input.closest('form');
+            if (dest && currentForm && !currentForm.contains(dest)) {
+                return;
+            }
+            // Si el campo está vacío y el usuario no ha interactuado antes, no mostrar error
+            if (!input.dataset.hasBlurred && !input.value.trim()) {
+                return;
+            }
 
             input.dataset.hasBlurred = 'true';
             const err = getEmailValidationError(input.value);
