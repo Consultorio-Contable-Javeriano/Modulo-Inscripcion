@@ -13,6 +13,7 @@ class SignupTests(TestCase):
             'email': 'nuevo@example.com',
             'password1': 'contrasena-segura-123',
             'password2': 'contrasena-segura-123',
+            'data_treatment_accepted': 'on',
         }, follow=True)
 
         self.assertRedirects(response, reverse('complete_profile'))
@@ -24,6 +25,7 @@ class SignupTests(TestCase):
             'email': 'nuevo@example.com',
             'password1': 'contrasena-segura-123',
             'password2': 'otra-contrasena-456',
+            'data_treatment_accepted': 'on',
         })
         self.assertEqual(response.status_code, 200)
         self.assertFalse(CustomUser.objects.filter(email='nuevo@example.com').exists())
@@ -34,6 +36,7 @@ class SignupTests(TestCase):
             'email': 'existente@example.com',
             'password1': 'contrasena-segura-123',
             'password2': 'contrasena-segura-123',
+            'data_treatment_accepted': 'on',
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(CustomUser.objects.filter(email='existente@example.com').count(), 1)
@@ -104,22 +107,28 @@ class ProfileTests(TestCase):
     def test_create_profile(self):
         response = self.client.post(reverse('complete_profile'), {
             'full_name': 'Usuario de Prueba',
+            'first_name': 'Usuario',
+            'last_name': 'de Prueba',
             'id_type': 'CC',
             'id_number': '123456789',
             'birth_date': '2000-01-01',
             'gender': 'Otro',
             'phone': '3000000000',
             'education_level': 'Universitario',
+            'education_level': 'Profesional',
         }, follow=True)
 
         self.assertRedirects(response, reverse('portal_home'))
         self.assertTrue(UserProfile.objects.filter(user=self.user, full_name='Usuario de Prueba').exists())
+        self.assertTrue(UserProfile.objects.filter(user=self.user, first_name='Usuario', last_name='de Prueba').exists())
 
     def test_alternate_email_is_optional(self):
         response = self.client.post(reverse('complete_profile'), {
             'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '123456789',
+            'first_name': 'Usuario', 'last_name': 'de Prueba', 'id_type': 'CC', 'id_number': '123456789',
             'birth_date': '2000-01-01', 'gender': 'Otro', 'phone': '3000000000',
             'education_level': 'Universitario', 'alternate_email': '',
+            'education_level': 'Profesional', 'alternate_email': '',
         }, follow=True)
 
         self.assertRedirects(response, reverse('portal_home'))
@@ -128,16 +137,20 @@ class ProfileTests(TestCase):
     def test_alternate_email_is_saved_when_provided(self):
         self.client.post(reverse('complete_profile'), {
             'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '123456789',
+            'first_name': 'Usuario', 'last_name': 'de Prueba', 'id_type': 'CC', 'id_number': '123456789',
             'birth_date': '2000-01-01', 'gender': 'Otro', 'phone': '3000000000',
             'education_level': 'Universitario', 'alternate_email': 'respaldo@example.com',
+            'education_level': 'Profesional', 'alternate_email': 'respaldo@example.com',
         })
         self.assertEqual(UserProfile.objects.get(user=self.user).alternate_email, 'respaldo@example.com')
 
     def test_alternate_email_must_be_a_valid_address(self):
         response = self.client.post(reverse('complete_profile'), {
             'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '123456789',
+            'first_name': 'Usuario', 'last_name': 'de Prueba', 'id_type': 'CC', 'id_number': '123456789',
             'birth_date': '2000-01-01', 'gender': 'Otro', 'phone': '3000000000',
             'education_level': 'Universitario', 'alternate_email': 'esto-no-es-un-correo',
+            'education_level': 'Profesional', 'alternate_email': 'esto-no-es-un-correo',
         })
         self.assertEqual(response.status_code, 200)
         self.assertFalse(UserProfile.objects.filter(user=self.user).exists())
@@ -145,10 +158,13 @@ class ProfileTests(TestCase):
     def test_edit_existing_profile(self):
         UserProfile.objects.create(
             user=self.user, full_name='Nombre Viejo', id_type='CC', id_number='987654321',
+            user=self.user, first_name='Nombre', last_name='Viejo', id_type='CC', id_number='987654321',
             birth_date='1999-05-05', gender='Otro', phone='3000000000',
         )
         response = self.client.post(reverse('complete_profile'), {
             'full_name': 'Nombre Nuevo',
+            'first_name': 'Nombre',
+            'last_name': 'Nuevo',
             'id_type': 'CC',
             'id_number': '987654321',
             'birth_date': '1999-05-05',
@@ -282,6 +298,7 @@ class ProfileValidationTests(TestCase):
     def _payload(self, **overrides):
         data = {
             'full_name': 'Usuario de Prueba', 'id_type': 'CC', 'id_number': '1098765432',
+            'first_name': 'Usuario', 'last_name': 'de Prueba', 'id_type': 'CC', 'id_number': '1098765432',
             'birth_date': '1990-05-20', 'gender': 'Otro', 'phone': '3001234567',
             'education_level': 'Técnico', 'alternate_email': '',
         }
@@ -312,6 +329,7 @@ class ProfileValidationTests(TestCase):
         response = self.client.post(reverse('complete_profile'), self._payload(phone='6011234567'))
         self.assertFormError(response.context['form'], 'phone',
                              'Un número de 10 dígitos es un celular y debe empezar por 3. Si es un fijo, escribe sus 7 dígitos.')
+                             'El número debe ser un celular válido de 10 dígitos iniciado por 3 (ej. 300 123 4567).')
 
     def test_phone_accepts_landline(self):
         self.client.post(reverse('complete_profile'), self._payload(phone='245-6789'))
@@ -321,3 +339,4 @@ class ProfileValidationTests(TestCase):
         response = self.client.post(reverse('complete_profile'), self._payload(phone='30012'))
         self.assertFormError(response.context['form'], 'phone',
                              'Escribe un celular de 10 dígitos o un fijo de 7; escribiste 5 dígitos.')
+                             'El número debe ser un celular válido de 10 dígitos iniciado por 3 (ej. 300 123 4567).')

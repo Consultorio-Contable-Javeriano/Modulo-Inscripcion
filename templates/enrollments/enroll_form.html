@@ -17,11 +17,15 @@
                 {% if field.field.widget.input_type == 'checkbox' %}
                 <div class="flex items-start gap-2">
                     {{ field }}
-                    <label for="{{ field.id_for_label }}" class="text-sm text-gray-700">{{ field.label }}</label>
+                    <label for="{{ field.id_for_label }}" class="text-sm text-gray-700">
+                        {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                 </div>
                 {% else %}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                <div id="wrapper-{{ field.name }}" class="flex flex-col">
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">
+                        {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ field }}
                     {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
                 </div>
@@ -36,9 +40,28 @@
             {% endif %}
         {% endfor %}
 
-        <button type="submit" class="px-4 py-2 bg-javblue text-white font-semibold uppercase text-sm tracking-wide rounded-sm hover:bg-javnavy transition-colors">
+        <button type="submit" class="w-full mt-4 px-4 py-2.5 bg-javblue text-white font-semibold uppercase text-sm tracking-wide rounded-sm hover:bg-javnavy transition-colors">
             Confirmar inscripción
         </button>
     </form>
 </div>
+
+<script>
+    (function() {
+        var selectEntity = document.getElementById('id_entity');
+        var wrapperOther = document.getElementById('wrapper-other_entity');
+        if (!selectEntity || !wrapperOther) return;
+
+        function checkEntity() {
+            if (selectEntity.value === 'Otros') {
+                wrapperOther.classList.remove('hidden');
+            } else {
+                wrapperOther.classList.add('hidden');
+            }
+        }
+
+        selectEntity.addEventListener('change', checkEntity);
+        checkEntity();
+    })();
+</script>
 {% endblock %}

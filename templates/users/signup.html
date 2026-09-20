@@ -21,7 +21,9 @@
 
             <!-- Campo Correo Electrónico -->
             <div class="flex flex-col">
-                <label for="{{ form.email.id_for_label }}" class="text-sm font-medium text-gray-700">{{ form.email.label }}</label>
+                <label for="{{ form.email.id_for_label }}" class="text-sm font-medium text-gray-700">
+                    {{ form.email.label }} <span class="text-red-500">*</span>
+                </label>
                 <div class="relative">
                     {{ form.email }}
                 </div>
@@ -50,7 +52,9 @@
 
             <!-- Campo Contraseña -->
             <div class="flex flex-col">
-                <label for="{{ form.password1.id_for_label }}" class="text-sm font-medium text-gray-700">{{ form.password1.label }}</label>
+                <label for="{{ form.password1.id_for_label }}" class="text-sm font-medium text-gray-700">
+                    {{ form.password1.label }} <span class="text-red-500">*</span>
+                </label>
                 <div class="relative">
                     {{ form.password1 }}
                     <button type="button" data-toggle-password="{{ form.password1.id_for_label }}" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-javnavy focus:outline-none transition-colors cursor-pointer" aria-label="Mostrar contraseña" title="Mostrar contraseña">
@@ -63,7 +67,15 @@
                         </svg>
                     </button>
                 </div>
-                {% if form.password1.help_text %}<p class="text-xs text-gray-500 mt-1">{{ form.password1.help_text }}</p>{% endif %}
+                <!-- Disclaimer de requisitos de contraseña -->
+                <div class="mt-1 p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600">
+                    <span class="font-semibold block text-gray-700 mb-0.5">Requisitos de contraseña:</span>
+                    <ul class="list-disc list-inside space-y-0.5">
+                        <li>Mínimo 8 caracteres.</li>
+                        <li>No debe ser una contraseña común ni muy similar a tu correo.</li>
+                        <li>Se recomienda combinar letras, números y símbolos.</li>
+                    </ul>
+                </div>
                 {% for error in form.password1.errors %}
                 <p class="text-sm text-red-600 mt-1">{{ error }}</p>
                 {% endfor %}
@@ -74,7 +86,9 @@
 
             <!-- Campo Confirmar Contraseña -->
             <div class="flex flex-col">
-                <label for="{{ form.password2.id_for_label }}" class="text-sm font-medium text-gray-700">{{ form.password2.label }}</label>
+                <label for="{{ form.password2.id_for_label }}" class="text-sm font-medium text-gray-700">
+                    {{ form.password2.label }} <span class="text-red-500">*</span>
+                </label>
                 <div class="relative">
                     {{ form.password2 }}
                     <button type="button" data-toggle-password="{{ form.password2.id_for_label }}" class="toggle-password-btn absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-javnavy focus:outline-none transition-colors cursor-pointer" aria-label="Mostrar contraseña" title="Mostrar contraseña">
@@ -90,6 +104,26 @@
                 {% if form.password2.help_text %}<p class="text-xs text-gray-500 mt-1">{{ form.password2.help_text }}</p>{% endif %}
                 {% for error in form.password2.errors %}
                 <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <!-- Disclaimer y Checkbox de Tratamiento de Datos -->
+            <div class="p-3 bg-blue-50/70 border border-blue-200 rounded-md space-y-2 mt-4">
+                <p class="text-xs text-gray-700 leading-relaxed font-semibold">
+                    Autorización de Tratamiento de Datos Personales y Sensibles:
+                </p>
+                <div class="max-h-32 overflow-y-auto p-2 bg-white rounded border border-gray-200 text-[11px] text-gray-600 leading-normal space-y-1">
+                    <p>Por medio del diligenciamiento del presente formulario, autorizo de manera previa, expresa e informada a la Pontificia Universidad Javeriana para que recolecte, almacene, use, disponga o eventualmente llegue a transmitir o transferir información personal referida a mis datos personales incluidos mi imagen y voz.</p>
+                    <p>Conozco que mis datos serán tratados para la inscripción a eventos/actividades académicas, gestión operativa y técnica, ser contactado para programas y ofertas académicas, y gestión estadística. Conozco que tengo derecho a conocer, actualizar, rectificar y suprimir mi información escribiendo a <em>midatopersonal@javeriana.edu.co</em>.</p>
+                </div>
+                <div class="flex items-start gap-2 pt-1">
+                    {{ form.data_treatment_accepted }}
+                    <label for="{{ form.data_treatment_accepted.id_for_label }}" class="text-xs font-semibold text-javnavy">
+                        {{ form.data_treatment_accepted.label }} <span class="text-red-500">*</span>
+                    </label>
+                </div>
+                {% for error in form.data_treatment_accepted.errors %}
+                <p class="text-xs text-red-600 font-medium">{{ error }}</p>
                 {% endfor %}
             </div>
 

@@ -15,11 +15,15 @@
             {% if field.field.widget.input_type == 'checkbox' %}
             <div class="flex items-center gap-2">
                 {{ field }}
-                <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">{{ field.label }}</label>
+                <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">
+                    {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
             </div>
             {% else %}
             <div class="flex flex-col">
-                <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">{{ field.label }}</label>
+                <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">
+                    {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
                 {{ field }}
             </div>
             {% endif %}
@@ -90,16 +94,16 @@
             if (!telefono) { return; }
             var digitos = telefono.value.replace(/[^0-9]/g, '');
             if (!digitos) { return aviso('phone', ''); }
-            if (digitos.length === 10 && digitos.charAt(0) !== '3') {
-                return aviso('phone', 'Un número de 10 dígitos es un celular y empieza por 3.', 'falta');
+            if (digitos.length > 0 && digitos.charAt(0) !== '3') {
+                return aviso('phone', 'Un celular colombiano debe empezar por 3.', 'falta');
             }
-            if (digitos.length === 7 || digitos.length === 10) {
-                return aviso('phone', digitos.length === 7 ? 'Teléfono fijo completo.' : 'Celular completo.', 'ok');
+            if (digitos.length === 10) {
+                return aviso('phone', 'Número celular completo.', 'ok');
             }
-            if (digitos.length < 7) {
-                return aviso('phone', 'Llevas ' + digitos.length + ' dígitos: un fijo tiene 7 y un celular 10.', 'falta');
+            if (digitos.length < 10) {
+                return aviso('phone', 'Llevas ' + digitos.length + ' dígitos de 10 requeridos.', 'falta');
             }
-            aviso('phone', 'Llevas ' + digitos.length + ' dígitos: un celular tiene 10.', 'falta');
+            aviso('phone', 'El número no debe exceder 10 dígitos.', 'falta');
         }
 
         if (tipo) { tipo.addEventListener('change', function () { ayudaDocumento(); revisarDocumento(); }); }

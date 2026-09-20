@@ -9,10 +9,27 @@ CHECKBOX_CLASSES = 'mt-1'
 
 
 class EnrollmentForm(forms.ModelForm):
+    entity = forms.ChoiceField(
+        label='¿A través de qué entidad se inscribe?',
+        choices=[('', 'Selecciona la entidad...')] + [(e, e) for e in locations.ENTITIES],
+        help_text='Lugar donde recibiste la invitación.'
+    )
+    other_entity = forms.CharField(
+        label='Si coloco "Otros" ¿Cuál?',
+        required=False,
+        help_text='Escribe la entidad si no aparece en la lista.'
+    )
+    city = forms.ChoiceField(
+        label='Ciudad o Municipio',
+        choices=[('', 'Selecciona tu ciudad...')] + [(c, c) for c in locations.CITIES],
+        help_text='Selecciona la ciudad desde donde participarás.'
+    )
+
     class Meta:
         model = Enrollment
         fields = [
             'entity',
+            'other_entity',
             'chosen_modality',
             'city',
             'locality',
@@ -41,6 +58,7 @@ class EnrollmentForm(forms.ModelForm):
     def _setup_usability_hints(self):
         """Ayudas de escritura: autocompletado del navegador y buscador de ciudad."""
         # Lista sugerida para el <datalist> que renderiza la plantilla.
+        """Ayudas de escritura y clases para autocompletado."""
         self.city_options = locations.CITIES
 
         self.fields['entity'].widget.attrs.update({
@@ -60,11 +78,17 @@ class EnrollmentForm(forms.ModelForm):
             'autocomplete': 'address-level3',
             'placeholder': 'Barrio o vereda donde vives',
         })
+        self.fields['neighborhood'].label = 'Barrio / Vereda'
 
     def _current_city(self):
         if self.is_bound:
             return self.data.get(self.add_prefix('city'), '')
         return self.initial.get('city') or ''
+
+    def _current_locality(self):
+        if self.is_bound:
+            return self.data.get(self.add_prefix('locality'), '')
+        return self.initial.get('locality') or ''
 
     def _setup_locality_field(self):
         """Ajusta el campo de localidad/comuna a la ciudad escrita.
@@ -79,17 +103,40 @@ class EnrollmentForm(forms.ModelForm):
         self.locality_label = label
         self.shows_locality = label is not None
         self.fields['locality'].required = False
+        loc_options = locations.get_locality_options(city)
+
+        if label and loc_options:
+            current_loc = self._current_locality()
+            choices = [('', f'Selecciona tu {label.lower()}...')] + [(opt, opt) for opt in loc_options]
+            if current_loc and current_loc not in loc_options:
+                choices.append((current_loc, current_loc))
+
+            self.fields['locality'] = forms.ChoiceField(
+                label=label,
+                choices=choices,
+                required=False,
+                help_text=locations.division_help_text(city),
+                widget=forms.Select(attrs={'class': TEXT_INPUT_CLASSES})
+            )
+        else:
+            self.fields['locality'] = forms.CharField(
+                label=label or 'Localidad o comuna',
+                required=False,
+                widget=forms.HiddenInput() if not label else forms.TextInput(attrs={'class': TEXT_INPUT_CLASSES})
+            )
 
         if label:
             self.fields['locality'].label = label
             self.fields['locality'].help_text = locations.division_help_text(city)
 
         # Al cambiar la ciudad, HTMX vuelve a pedir este campo para actualizar la etiqueta.
+        # Al cambiar la ciudad, HTMX vuelve a pedir este campo para actualizar la etiqueta y opciones.
         self.fields['city'].widget.attrs.update({
             'hx-get': reverse('locality_field'),
             'hx-target': '#locality-field',
             'hx-swap': 'outerHTML',
             'hx-trigger': 'change, keyup changed delay:500ms',
+            'hx-trigger': 'change',
             'hx-include': '[name=locality]',
         })
 
@@ -115,6 +162,12 @@ class EnrollmentForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        entity = cleaned_data.get('entity')
+        other_entity = (cleaned_data.get('other_entity') or '').strip()
+
+        if entity == 'Otros' and not other_entity:
+            self.add_error('other_entity', 'Por favor especifica cuál es tu entidad de inscripción.')
+
         label = locations.division_label(cleaned_data.get('city', ''))
         locality = (cleaned_data.get('locality') or '').strip()
 

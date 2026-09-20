@@ -13,10 +13,23 @@ from .models import Enrollment, Module
 @login_required
 def portal_home(request):
     modules = Module.objects.filter(is_active=True).order_by('enrollment_start')
+    modules = Module.objects.filter(is_active=True).order_by('level', 'enrollment_start')
     enrolled_module_ids = set(
         Enrollment.objects.filter(user=request.user, module__in=modules).values_list('module_id', flat=True)
     )
+    
+    modules_info = []
+    for module in modules:
+        can_enroll, reason = module.can_user_enroll(request.user)
+        modules_info.append({
+            'module': module,
+            'is_enrolled': module.id in enrolled_module_ids,
+            'can_enroll': can_enroll,
+            'prereq_reason': reason,
+        })
+
     return render(request, 'enrollments/portal_home.html', {
+        'modules_info': modules_info,
         'modules': modules,
         'enrolled_module_ids': enrolled_module_ids,
         'profile_incomplete': not hasattr(request.user, 'profile'),
@@ -37,6 +50,11 @@ def enroll(request, module_id):
 
     if Enrollment.objects.filter(user=request.user, module=module).exists():
         messages.info(request, 'Ya estás inscrito en este módulo.')
+        return redirect('portal_home')
+
+    can_enroll, reason = module.can_user_enroll(request.user)
+    if not can_enroll:
+        messages.error(request, reason)
         return redirect('portal_home')
 
     defaults = UserSavedDefaults.objects.filter(user=request.user).first()

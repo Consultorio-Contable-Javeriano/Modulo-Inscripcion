@@ -22,17 +22,23 @@
     <div class="w-12 h-1 bg-javgold mb-5"></div>
 
     {% if modules %}
+    {% if modules_info %}
         <ul class="space-y-3">
-            {% for module in modules %}
+            {% for item in modules_info %}
                 <li class="p-4 bg-white rounded shadow-sm border border-gray-100 flex items-center justify-between flex-wrap gap-3">
                     <div>
-                        <p class="font-semibold text-javnavy">{{ module.name }} — {{ module.semester }}</p>
-                        <p class="text-sm text-gray-600">{{ module.get_modality_display }} · {{ module.schedule_details }}</p>
+                        <p class="font-semibold text-javnavy">{{ item.module.name }} — {{ item.module.semester }}</p>
+                        <p class="text-sm text-gray-600">{{ item.module.get_modality_display }} · {{ item.module.schedule_details }}</p>
+                        {% if not item.is_enrolled and not item.can_enroll %}
+                            <p class="text-xs text-amber-700 font-medium mt-1">{{ item.prereq_reason }}</p>
+                        {% endif %}
                     </div>
-                    {% if module.id in enrolled_module_ids %}
+                    {% if item.is_enrolled %}
                         <span class="text-sm font-semibold text-green-700">Inscrito</span>
-                    {% elif module.is_enrollment_open %}
-                        <a href="{% url 'enroll' module.id %}" class="px-4 py-2 bg-javblue text-white text-sm font-semibold uppercase tracking-wide rounded-sm hover:bg-javnavy transition-colors">Inscribirme</a>
+                    {% elif not item.can_enroll %}
+                        <span class="text-xs font-semibold text-amber-800 bg-amber-100 px-2.5 py-1.5 rounded">Requisito pendiente</span>
+                    {% elif item.module.is_enrollment_open %}
+                        <a href="{% url 'enroll' item.module.id %}" class="px-4 py-2 bg-javblue text-white text-sm font-semibold uppercase tracking-wide rounded-sm hover:bg-javnavy transition-colors">Inscribirme</a>
                     {% else %}
                         <span class="text-sm text-gray-400">Inscripciones cerradas</span>
                     {% endif %}
@@ -41,6 +47,7 @@
         </ul>
     {% else %}
         <p class="text-gray-600">No hay módulos activos en este momento.</p>
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

@@ -15,6 +15,8 @@ class EnrollmentFlowTests(TestCase):
         UserProfile.objects.create(
             user=self.user,
             full_name='Usuario de Prueba',
+            first_name='Usuario',
+            last_name='de Prueba',
             id_type='CC',
             id_number='123456789',
             birth_date=date(2000, 1, 1),
@@ -24,6 +26,7 @@ class EnrollmentFlowTests(TestCase):
         now = timezone.now()
         self.open_module = Module.objects.create(
             name='Nivel 1',
+            level=1,
             semester='Segundo Semestre de 2026',
             modality='Virtual',
             enrollment_start=now - timedelta(days=1),
@@ -34,6 +37,7 @@ class EnrollmentFlowTests(TestCase):
         )
         self.closed_module = Module.objects.create(
             name='Nivel 2',
+            level=2,
             semester='Segundo Semestre de 2026',
             modality='Presencial',
             enrollment_start=now - timedelta(days=10),
@@ -73,9 +77,12 @@ class EnrollmentFlowTests(TestCase):
     def test_chosen_modality_must_match_module_modality(self):
         response = self.client.post(reverse('enroll', args=[self.open_module.id]), {
             'entity': 'Empresa X',
+            'entity': 'Fundación Domus',
             'chosen_modality': 'Presencial',  # el módulo solo permite Virtual
             'city': 'Bogotá',
             'locality': 'Chapinero',
+            'city': 'Bogotá D.C',
+            'locality': 'Suba Barrios Unidos',
             'neighborhood': 'Chicó',
             'data_treatment_accepted': 'on',
             'attendance_commitment': 'on',
@@ -86,9 +93,12 @@ class EnrollmentFlowTests(TestCase):
     def test_successful_enrollment_creates_record_and_saves_defaults(self):
         response = self.client.post(reverse('enroll', args=[self.open_module.id]), {
             'entity': 'Empresa X',
+            'entity': 'Fundación Domus',
             'chosen_modality': 'Virtual',
             'city': 'Bogotá',
             'locality': 'Chapinero',
+            'city': 'Bogotá D.C',
+            'locality': 'Suba Barrios Unidos',
             'neighborhood': 'Chicó',
             'data_treatment_accepted': 'on',
             'attendance_commitment': 'on',
@@ -105,14 +115,19 @@ class EnrollmentFlowTests(TestCase):
         self.assertEqual(defaults.last_entity, 'Empresa X')
         self.assertEqual(defaults.last_city, 'Bogotá')
         self.assertEqual(defaults.last_locality, 'Chapinero')
+        self.assertEqual(defaults.last_entity, 'Fundación Domus')
+        self.assertEqual(defaults.last_city, 'Bogotá D.C')
+        self.assertEqual(defaults.last_locality, 'Suba Barrios Unidos')
 
     def test_cannot_enroll_twice_in_same_module(self):
         Enrollment.objects.create(
             user=self.user,
             module=self.open_module,
             entity='Empresa X',
+            entity='Fundación Domus',
             chosen_modality='Virtual',
             city='Bogotá',
+            city='Bogotá D.C',
             neighborhood='Chapinero',
             data_treatment_accepted=True,
             attendance_commitment=True,
@@ -125,9 +140,12 @@ class EnrollmentFlowTests(TestCase):
     def test_enrollment_requires_accepting_data_treatment(self):
         response = self.client.post(reverse('enroll', args=[self.open_module.id]), {
             'entity': 'Empresa X',
+            'entity': 'Fundación Domus',
             'chosen_modality': 'Virtual',
             'city': 'Bogotá',
             'locality': 'Chapinero',
+            'city': 'Bogotá D.C',
+            'locality': 'Suba Barrios Unidos',
             'neighborhood': 'Chicó',
             'attendance_commitment': 'on',
         })
@@ -140,22 +158,29 @@ class EnrollmentFlowTests(TestCase):
         other_user = CustomUser.objects.create_user(email='otro@example.com', password='clave-segura123')
         Enrollment.objects.create(
             user=other_user, module=self.open_module, entity='Otra', chosen_modality='Virtual',
+            user=other_user, module=self.open_module, entity='Fundación Domus', chosen_modality='Virtual',
             city='Cali', neighborhood='Centro', data_treatment_accepted=True, attendance_commitment=True,
         )
         Enrollment.objects.create(
             user=self.user, module=self.open_module, entity='Empresa X', chosen_modality='Virtual',
             city='Bogotá', neighborhood='Chapinero', data_treatment_accepted=True, attendance_commitment=True,
+            user=self.user, module=self.open_module, entity='Banco de Alimentos', chosen_modality='Virtual',
+            city='Bogotá D.C', neighborhood='Chapinero', data_treatment_accepted=True, attendance_commitment=True,
         )
 
         response = self.client.get(reverse('my_enrollments'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Empresa X')
         self.assertNotContains(response, 'Otra')
+        self.assertContains(response, 'Banco de Alimentos')
+        self.assertNotContains(response, 'Fundación Domus')
 
     def test_cancel_enrollment_removes_record(self):
         enrollment = Enrollment.objects.create(
             user=self.user, module=self.open_module, entity='Empresa X', chosen_modality='Virtual',
             city='Bogotá', neighborhood='Chapinero', data_treatment_accepted=True, attendance_commitment=True,
+            user=self.user, module=self.open_module, entity='Fundación Domus', chosen_modality='Virtual',
+            city='Bogotá D.C', neighborhood='Chapinero', data_treatment_accepted=True, attendance_commitment=True,
         )
 
         response = self.client.post(reverse('cancel_enrollment', args=[enrollment.id]), follow=True)
@@ -166,12 +191,30 @@ class EnrollmentFlowTests(TestCase):
         other_user = CustomUser.objects.create_user(email='otro@example.com', password='clave-segura123')
         enrollment = Enrollment.objects.create(
             user=other_user, module=self.open_module, entity='Otra', chosen_modality='Virtual',
+            user=other_user, module=self.open_module, entity='Fundación Domus', chosen_modality='Virtual',
             city='Cali', neighborhood='Centro', data_treatment_accepted=True, attendance_commitment=True,
         )
 
         response = self.client.post(reverse('cancel_enrollment', args=[enrollment.id]))
         self.assertEqual(response.status_code, 404)
         self.assertEqual(Enrollment.objects.count(), 1)
+
+    def test_linear_progression_blocks_level_2_without_level_1(self):
+        now = timezone.now()
+        module_level2 = Module.objects.create(
+            name='Nivel 2 Avanzado',
+            level=2,
+            semester='Segundo Semestre de 2026',
+            modality='Virtual',
+            enrollment_start=now - timedelta(days=1),
+            enrollment_end=now + timedelta(days=1),
+            class_start_date=now.date() + timedelta(days=10),
+            schedule_details='Sábados',
+            is_active=True,
+        )
+        response = self.client.get(reverse('enroll', args=[module_level2.id]), follow=True)
+        self.assertRedirects(response, reverse('portal_home'))
+        self.assertContains(response, 'Debes estar inscrito previamente en un módulo de Nivel 1')
 
     def test_staff_dashboard_requires_staff(self):
         response = self.client.get(reverse('staff_dashboard'))
@@ -192,11 +235,13 @@ class LocalityFieldTests(TestCase):
         self.user = CustomUser.objects.create_user(email='usuario@example.com', password='clave-segura123')
         UserProfile.objects.create(
             user=self.user, full_name='Usuario de Prueba', id_type='CC', id_number='123456789',
+            user=self.user, first_name='Usuario', last_name='de Prueba', id_type='CC', id_number='123456789',
             birth_date=date(2000, 1, 1), gender='Otro', phone='3000000000',
         )
         now = timezone.now()
         self.module = Module.objects.create(
             name='Nivel 1', semester='Segundo Semestre de 2026', modality='Virtual',
+            name='Nivel 1', level=1, semester='Segundo Semestre de 2026', modality='Virtual',
             enrollment_start=now - timedelta(days=1), enrollment_end=now + timedelta(days=1),
             class_start_date=now.date() + timedelta(days=10),
             schedule_details='Sábados de 2:00 p.m. a 5:00 p.m.', is_active=True,
@@ -206,9 +251,12 @@ class LocalityFieldTests(TestCase):
     def _payload(self, **overrides):
         data = {
             'entity': 'Fundación X',
+            'entity': 'Fundación Domus',
             'chosen_modality': 'Virtual',
             'city': 'Bogotá',
             'locality': 'Suba',
+            'city': 'Bogotá D.C',
+            'locality': 'Suba Barrios Unidos',
             'neighborhood': 'Niza',
             'data_treatment_accepted': 'on',
             'attendance_commitment': 'on',
@@ -218,6 +266,7 @@ class LocalityFieldTests(TestCase):
 
     def test_label_is_localidad_in_bogota(self):
         response = self.client.get(reverse('locality_field'), {'city': 'Bogotá'})
+        response = self.client.get(reverse('locality_field'), {'city': 'Bogotá D.C'})
         self.assertContains(response, 'Localidad')
         self.assertNotContains(response, 'Comuna')
 
@@ -238,9 +287,11 @@ class LocalityFieldTests(TestCase):
         # porque sin campo en la pagina hx-include no tenia nada que enviar.
         response = self.client.get(reverse('locality_field'), {'city': 'Villavicencio', 'locality': 'Suba'})
         self.assertContains(response, 'type="hidden" name="locality" value="Suba"')
+        self.assertContains(response, 'name="locality"')
 
     def test_city_is_matched_without_accents_or_case(self):
         for escrito in ['bogota', 'BOGOTÁ', 'Bogotá D.C.']:
+        for escrito in ['bogota', 'BOGOTÁ', 'Bogotá D.C']:
             response = self.client.get(reverse('locality_field'), {'city': escrito})
             self.assertContains(response, 'Localidad', msg_prefix=f'ciudad escrita como {escrito!r}')
 
@@ -271,9 +322,11 @@ class LocalityFieldTests(TestCase):
     def test_locality_is_saved_and_autocompleted_next_time(self):
         self.client.post(reverse('enroll', args=[self.module.id]), self._payload())
         self.assertEqual(UserSavedDefaults.objects.get(user=self.user).last_locality, 'Suba')
+        self.assertEqual(UserSavedDefaults.objects.get(user=self.user).last_locality, 'Suba Barrios Unidos')
 
         otro = Module.objects.create(
             name='Nivel 2', semester='Segundo Semestre de 2026', modality='Virtual',
+            name='Nivel 2', level=2, semester='Segundo Semestre de 2026', modality='Virtual',
             enrollment_start=timezone.now() - timedelta(days=1),
             enrollment_end=timezone.now() + timedelta(days=1),
             class_start_date=timezone.now().date() + timedelta(days=10),
@@ -282,6 +335,7 @@ class LocalityFieldTests(TestCase):
         response = self.client.get(reverse('enroll', args=[otro.id]))
         self.assertEqual(response.context['form'].initial['locality'], 'Suba')
         self.assertContains(response, 'Suba')
+        self.assertEqual(response.context['form'].initial['locality'], 'Suba Barrios Unidos')
 
     def test_no_template_comment_leaks_into_the_page(self):
         # Un comentario {# #} de varias lineas no es un comentario para Django: se imprime
@@ -303,4 +357,5 @@ class LocalityFieldTests(TestCase):
     def test_locality_field_requires_login(self):
         self.client.logout()
         response = self.client.get(reverse('locality_field'), {'city': 'Bogotá'})
+        response = self.client.get(reverse('locality_field'), {'city': 'Bogotá D.C'})
         self.assertEqual(response.status_code, 302)

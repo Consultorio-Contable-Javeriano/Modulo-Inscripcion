@@ -41,6 +41,12 @@ class LoginForm(AuthenticationForm):
 
 
 class SignupForm(UserCreationForm):
+    data_treatment_accepted = forms.BooleanField(
+        required=True,
+        label='Sí autorizo el uso de mis datos personales y sensibles',
+        error_messages={'required': 'Debes autorizar el tratamiento de datos para registrarte.'}
+    )
+
     class Meta:
         model = CustomUser
         fields = ('email',)
@@ -49,13 +55,18 @@ class SignupForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.help_text = None
+        for name, field in self.fields.items():
+            if name != 'password1':
+                field.help_text = None
         _style_widgets(self.fields)
         if 'email' in self.fields:
             self.fields['email'].widget.attrs.update({
                 'placeholder': 'nombre@ejemplo.com',
                 'autocomplete': 'email',
+                'autofocus': True,
             })
         if 'password1' in self.fields:
+            self.fields['password1'].help_text = 'La contraseña debe tener al menos 8 caracteres, no ser muy común ni ser solo números.'
             self.fields['password1'].widget.attrs.update({
                 'class': self.fields['password1'].widget.attrs.get('class', '') + ' pr-10',
                 'placeholder': '••••••••',
@@ -82,7 +93,8 @@ class UserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = [
-            'full_name',
+            'first_name',
+            'last_name',
             'id_type',
             'id_number',
             'birth_date',
@@ -103,9 +115,13 @@ class UserProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         _style_widgets(self.fields)
 
-        self.fields['full_name'].widget.attrs.update({
-            'autocomplete': 'name',
-            'placeholder': 'Como aparece en tu documento',
+        self.fields['first_name'].widget.attrs.update({
+            'autocomplete': 'given-name',
+            'placeholder': 'Nombres completos',
+        })
+        self.fields['last_name'].widget.attrs.update({
+            'autocomplete': 'family-name',
+            'placeholder': 'Apellidos completos',
         })
         self.fields['id_number'].widget.attrs.update({
             'inputmode': 'numeric',
@@ -113,6 +129,7 @@ class UserProfileForm(forms.ModelForm):
             'maxlength': '15',
         })
         self.fields['id_number'].help_text = 'Solo números, entre 6 y 10 dígitos, sin puntos ni espacios.'
+        self.fields['phone'].label = 'Teléfono celular'
         self.fields['phone'].widget.attrs.update({
             'inputmode': 'tel',
             'autocomplete': 'tel',
@@ -120,6 +137,7 @@ class UserProfileForm(forms.ModelForm):
             'placeholder': '300 123 4567',
         })
         self.fields['phone'].help_text = 'Celular de 10 dígitos (empieza por 3) o fijo de 7 dígitos.'
+        self.fields['phone'].help_text = 'Celular de 10 dígitos (empieza por 3).'
         self.fields['alternate_email'].widget.attrs.update({
             'autocomplete': 'email',
             'placeholder': 'Opcional, por si perdemos contacto',
@@ -134,6 +152,7 @@ class UserProfileForm(forms.ModelForm):
 
         `id_type` se declara antes que `id_number`, así que ya está limpio aquí.
         """
+        """Valida según el tipo de documento elegido."""
         numero = (self.cleaned_data.get('id_number') or '').strip()
         tipo = self.cleaned_data.get('id_type')
 
@@ -151,11 +170,13 @@ class UserProfileForm(forms.ModelForm):
 
     def clean_phone(self):
         """Acepta espacios, guiones, paréntesis y prefijo +57, y guarda solo los dígitos."""
+        """Valida exclusivamente número de teléfono celular colombiano (10 dígitos arrancando por 3)."""
         telefono = re.sub(r'[\s()\-\.]', '', (self.cleaned_data.get('phone') or ''))
         if telefono.startswith('+57'):
             telefono = telefono[3:]
         elif telefono.startswith('+'):
             raise forms.ValidationError('Escribe un número colombiano, sin prefijo de otro país.')
+            raise forms.ValidationError('Escribe un número celular colombiano, sin prefijo de otro país.')
 
         if not telefono.isdigit():
             raise forms.ValidationError('El teléfono debe tener solo números. Puedes separar con espacios o guiones, pero no usar letras.')
@@ -166,4 +187,7 @@ class UserProfileForm(forms.ModelForm):
             raise forms.ValidationError(
                 f'Escribe un celular de 10 dígitos o un fijo de 7; escribiste {len(telefono)} dígitos.'
             )
+            raise forms.ValidationError('El teléfono celular debe contener solo números.')
+        if len(telefono) != 10 or not telefono.startswith('3'):
+            raise forms.ValidationError('El número debe ser un celular válido de 10 dígitos iniciado por 3 (ej. 300 123 4567).')
         return telefono

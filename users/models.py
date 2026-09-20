@@ -57,18 +57,42 @@ class UserProfile(models.Model):
         ('Prefiero no decirlo', 'Prefiero no decirlo'),
     ]
 
+    EDUCATION_LEVEL_CHOICES = [
+        ('Primaria', 'Primaria'),
+        ('Secundaria', 'Secundaria'),
+        ('Técnico', 'Técnico'),
+        ('Tecnólogo', 'Tecnólogo'),
+        ('Profesional', 'Profesional'),
+        ('Especialización', 'Especialización'),
+        ('Maestría', 'Maestría'),
+        ('Doctorado', 'Doctorado'),
+        ('Ninguna de las anteriores', 'Ninguna de las anteriores'),
+    ]
+
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile', verbose_name='Usuario')
     full_name = models.CharField('Nombre completo', max_length=255) #[cite: 1, 2]
     id_type = models.CharField('Tipo de documento', max_length=50, choices=ID_TYPE_CHOICES) #[cite: 1, 2]
     id_number = models.CharField('Número de documento', max_length=50, unique=True) #[cite: 1, 2]
+    first_name = models.CharField('Nombres', max_length=150, default='')
+    last_name = models.CharField('Apellidos', max_length=150, default='')
+    id_type = models.CharField('Tipo de documento', max_length=50, choices=ID_TYPE_CHOICES)
+    id_number = models.CharField('Número de documento', max_length=50, unique=True)
     birth_date = models.DateField('Fecha de nacimiento')
     gender = models.CharField('Género', max_length=50, choices=GENDER_CHOICES) #[cite: 1, 2]
     phone = models.CharField('Teléfono', max_length=50) #[cite: 1, 2]
+    gender = models.CharField('Género', max_length=50, choices=GENDER_CHOICES)
+    phone = models.CharField('Teléfono celular', max_length=50)
     # Correo secundario opcional, pedido en el documento de levantamiento: sirve de
     # respaldo para contactar al usuario sin reemplazar al correo de la cuenta.
     alternate_email = models.EmailField('Correo electrónico alternativo', blank=True, null=True)
     education_level = models.CharField('Nivel educativo', max_length=100, blank=True, null=True) #[cite: 1, 2]
     has_business = models.BooleanField('Tiene negocio propio', default=False) #[cite: 1, 2]
+    education_level = models.CharField('Nivel educativo', max_length=100, choices=EDUCATION_LEVEL_CHOICES, blank=True, null=True)
+    has_business = models.BooleanField('Tiene negocio propio', default=False)
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def age(self):

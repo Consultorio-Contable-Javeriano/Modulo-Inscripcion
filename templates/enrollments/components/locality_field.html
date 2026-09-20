@@ -7,6 +7,7 @@ por eso el div externo se renderiza siempre, incluso cuando el campo no aplica.
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.locality.id_for_label }}">
             {{ form.locality.label }}
+            {{ form.locality.label }} <span class="text-red-500">*</span>
         </label>
         {{ form.locality }}
         {% if form.locality.help_text %}
