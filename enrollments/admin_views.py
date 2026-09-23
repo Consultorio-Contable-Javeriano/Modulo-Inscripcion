@@ -83,3 +83,16 @@ class ManageSubgroupsView(AdminRequiredMixin, ListView):
             messages.success(request, f"Subgrupo '{subgroup_name}' creado con {len(selected_enrollments)} usuarios.")
         
         return redirect('manage_subgroups', module_id=self.module.id)
+    
+class EnrollmentListView(AdminRequiredMixin, ListView):
+    model = Enrollment
+    template_name = 'enrollments/admin/enrollment_list.html'
+    context_object_name = 'enrollments'
+    
+    def get_queryset(self):
+        return Enrollment.objects.all().select_related('user', 'module')
+
+class EnrollmentDeleteView(AdminRequiredMixin, DeleteView):
+    model = Enrollment
+    success_url = reverse_lazy('consultorio:enrollment_list')
+    # Opcional: template de confirmación o usar HTMX para eliminar directo
