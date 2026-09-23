@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4">Agrupar Estudiantes - {{ module.name }}</h2>
+
+    <!-- Controles de Filtro Rápido (HTMX actualiza solo la tabla) -->
+    <div class="mb-4 space-x-2">
+        <button hx-get="?filter=all" hx-target="#enrollments-table" class="bg-gray-200 px-4 py-2 rounded">Todos</button>
+        <button hx-get="?filter=has_business" hx-target="#enrollments-table" class="bg-blue-200 px-4 py-2 rounded">Con Empresa</button>
+        <button hx-get="?filter=adults" hx-target="#enrollments-table" class="bg-green-200 px-4 py-2 rounded">Mayores de 30</button>
+    </div>
+
+    <!-- Formulario para crear el subgrupo con los usuarios seleccionados -->
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-4 flex gap-4">
+            <input type="text" name="subgroup_name" placeholder="Nombre del nuevo subgrupo" required class="border p-2 rounded w-64">
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Crear Subgrupo y Asignar</button>
+        </div>
+
+        <table class="min-w-full bg-white border" id="enrollments-table">
+            <thead>
+                <tr>
+                    <th class="py-2 border-b"><input type="checkbox" id="select-all"></th>
+                    <th class="py-2 border-b">Nombre</th>
+                    <th class="py-2 border-b">Edad</th>
+                    <th class="py-2 border-b">¿Empresa?</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% include 'enrollments/admin/partials/enrollment_rows.html' %}
+            </tbody>
+        </table>
+    </form>
+</div>
+
+<script>
+    // Lógica simple para el checkbox "Seleccionar todos"
+    document.getElementById('select-all').addEventListener('change', function(e) {
+        let checkboxes = document.querySelectorAll('input[name="enrollment_ids"]');
+        checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+</script>
+{% endblock %}

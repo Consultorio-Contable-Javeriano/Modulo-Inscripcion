@@ -1,0 +1,14 @@
+{% for enrollment in enrollments %}
+<tr class="text-center">
+    <td class="py-2 border-b">
+        <input type="checkbox" name="enrollment_ids" value="{{ enrollment.id }}">
+    </td>
+    <td class="py-2 border-b">{{ enrollment.user.profile.full_name }}</td>
+    <td class="py-2 border-b">{{ enrollment.user.profile.age }}</td>
+    <td class="py-2 border-b">{% if enrollment.user.profile.has_business %}Sí{% else %}No{% endif %}</td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="4" class="py-4 text-center text-gray-500">No hay usuarios bajo este filtro.</td>
+</tr>
+{% endfor %}

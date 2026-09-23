@@ -94,3 +94,18 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.user.email} -> {self.module.name}"
+    
+class Subgroup(models.Model):
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='subgroups', verbose_name='Módulo')
+    name = models.CharField('Nombre del Subgrupo', max_length=150)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Relación ManyToMany para agrupar inscripciones
+    enrollments = models.ManyToManyField('Enrollment', related_name='subgroups', blank=True)
+
+    class Meta:
+        verbose_name = 'Subgrupo'
+        verbose_name_plural = 'Subgrupos'
+
+    def __str__(self):
+        return f"{self.name} - {self.module.name}"

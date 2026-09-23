@@ -1,11 +1,17 @@
 from django.urls import path
 from . import views
 
+app_name = 'consultorio' # O el nombre de tu aplicación
+
 urlpatterns = [
-    path('', views.portal_home, name='portal_home'),
-    path('inscribirse/<int:module_id>/', views.enroll, name='enroll'),
-    path('campo-localidad/', views.locality_field, name='locality_field'),
-    path('mis-inscripciones/', views.my_enrollments, name='my_enrollments'),
-    path('mis-inscripciones/<int:enrollment_id>/cancelar/', views.cancel_enrollment, name='cancel_enrollment'),
-    path('administrar/', views.staff_dashboard, name='staff_dashboard'),
+    # ... tus URLs anteriores (ej. manage_subgroups) ...
+
+    # URLs para Módulos
+    path('modulos/', views.ModuleListView.as_view(), name='module_list'),
+    path('modulos/crear/', views.ModuleCreateView.as_view(), name='module_create'),
+    path('modulos/<int:pk>/editar/', views.ModuleUpdateView.as_view(), name='module_update'),
+    path('modulos/<int:pk>/eliminar/', views.ModuleDeleteView.as_view(), name='module_delete'),
+
+    # URLs para Usuarios
+    path('usuarios/', views.UserListView.as_view(), name='user_list'),
 ]
