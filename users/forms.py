@@ -2,7 +2,6 @@ import re
 from datetime import date
 
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import CustomUser, UserProfile
@@ -53,15 +52,13 @@ class SignupForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.help_text = None
         for name, field in self.fields.items():
             if name != 'password1':
                 field.help_text = None
         _style_widgets(self.fields)
         if 'email' in self.fields:
             self.fields['email'].widget.attrs.update({
-                'placeholder': 'nombre@ejemplo.com',
+                'placeholder': 'tucorreo@ejemplo.com',
                 'autocomplete': 'email',
                 'autofocus': True,
             })
@@ -78,15 +75,6 @@ class SignupForm(UserCreationForm):
                 'placeholder': '••••••••',
                 'autocomplete': 'new-password',
             })
-
-        self.fields['email'].widget.attrs.update({
-            'autocomplete': 'email',
-            'autofocus': True,
-            'placeholder': 'tucorreo@ejemplo.com',
-        })
-        # "new-password" evita que el navegador rellene aquí la contraseña de otra cuenta.
-        self.fields['password1'].widget.attrs.update({'autocomplete': 'new-password'})
-        self.fields['password2'].widget.attrs.update({'autocomplete': 'new-password'})
 
 
 class UserProfileForm(forms.ModelForm):
@@ -129,7 +117,7 @@ class UserProfileForm(forms.ModelForm):
             'maxlength': '15',
         })
         self.fields['id_number'].help_text = 'Solo números, entre 6 y 10 dígitos, sin puntos ni espacios.'
-        self.fields['phone'].label = 'Teléfono celular'
+        self.fields['phone'].label = 'Teléfono'
         self.fields['phone'].widget.attrs.update({
             'inputmode': 'tel',
             'autocomplete': 'tel',
@@ -137,14 +125,13 @@ class UserProfileForm(forms.ModelForm):
             'placeholder': '300 123 4567',
         })
         self.fields['phone'].help_text = 'Celular de 10 dígitos (empieza por 3) o fijo de 7 dígitos.'
-        self.fields['phone'].help_text = 'Celular de 10 dígitos (empieza por 3).'
         self.fields['alternate_email'].widget.attrs.update({
             'autocomplete': 'email',
             'placeholder': 'Opcional, por si perdemos contacto',
         })
         self.fields['birth_date'].widget.attrs.update({
             'autocomplete': 'bday',
-            'max': date.today().isoformat(),  # nadie nace mañana
+            'max': date.today().isoformat(),
         })
 
     def clean_id_number(self):
@@ -152,7 +139,6 @@ class UserProfileForm(forms.ModelForm):
 
         `id_type` se declara antes que `id_number`, así que ya está limpio aquí.
         """
-        """Valida según el tipo de documento elegido."""
         numero = (self.cleaned_data.get('id_number') or '').strip()
         tipo = self.cleaned_data.get('id_type')
 
@@ -169,14 +155,18 @@ class UserProfileForm(forms.ModelForm):
         return numero
 
     def clean_phone(self):
-        """Acepta espacios, guiones, paréntesis y prefijo +57, y guarda solo los dígitos."""
-        """Valida exclusivamente número de teléfono celular colombiano (10 dígitos arrancando por 3)."""
+        """Acepta espacios, guiones, paréntesis y prefijo +57, y guarda solo los dígitos.
+
+        Reglas:
+        - 10 dígitos → celular colombiano, debe empezar por 3.
+        - 7 dígitos → número fijo, se acepta tal cual.
+        - Cualquier otra longitud → error.
+        """
         telefono = re.sub(r'[\s()\-\.]', '', (self.cleaned_data.get('phone') or ''))
         if telefono.startswith('+57'):
             telefono = telefono[3:]
         elif telefono.startswith('+'):
             raise forms.ValidationError('Escribe un número colombiano, sin prefijo de otro país.')
-            raise forms.ValidationError('Escribe un número celular colombiano, sin prefijo de otro país.')
 
         if not telefono.isdigit():
             raise forms.ValidationError('El teléfono debe tener solo números. Puedes separar con espacios o guiones, pero no usar letras.')
@@ -187,7 +177,4 @@ class UserProfileForm(forms.ModelForm):
             raise forms.ValidationError(
                 f'Escribe un celular de 10 dígitos o un fijo de 7; escribiste {len(telefono)} dígitos.'
             )
-            raise forms.ValidationError('El teléfono celular debe contener solo números.')
-        if len(telefono) != 10 or not telefono.startswith('3'):
-            raise forms.ValidationError('El número debe ser un celular válido de 10 dígitos iniciado por 3 (ej. 300 123 4567).')
         return telefono

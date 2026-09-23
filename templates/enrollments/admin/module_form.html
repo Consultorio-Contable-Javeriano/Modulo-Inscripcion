@@ -1,30 +1,149 @@
 {% extends 'base.html' %}
 
-{% block title %}
-    {% if object %}Editar Módulo{% else %}Crear Nuevo Módulo{% endif %}
-{% endblock %}
+{% block title %}{{ title|default:"Módulo" }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto mt-5 max-w-2xl">
-    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h2 class="text-xl font-bold mb-6">
-            {% if object %}Editar Módulo: {{ object.name }}{% else %}Registrar Nuevo Módulo{% endif %}
-        </h2>
+<div class="bg-javblue">
+    <div class="max-w-3xl mx-auto py-8 px-4">
+        <p class="text-xs font-bold uppercase tracking-wide text-javgold mb-1">Panel administrativo · Módulos</p>
+        <h1 class="text-3xl font-extrabold text-white">{{ title|default:"Módulo" }}</h1>
+    </div>
+</div>
 
-        <form method="post" action="">
+<div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded shadow-sm border border-gray-100 p-6">
+        <form method="post">
             {% csrf_token %}
-            
-            <!-- Renderizado de formulario de Django -->
-            <div class="space-y-4">
-                {{ form.as_p }}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                <!-- Nombre -->
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Nombre del módulo <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Nivel -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Nivel <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.level }}
+                    {% if form.level.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.level.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-400 mt-1">1 = Básico · 2 = Intermedio · 3 = Avanzado</p>
+                </div>
+
+                <!-- Semestre -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Semestre <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.semester }}
+                    {% if form.semester.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.semester.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Modalidad -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Modalidad <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.modality }}
+                    {% if form.modality.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.modality.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Horario -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Horario <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.schedule_details }}
+                    {% if form.schedule_details.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.schedule_details.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-400 mt-1">Ej: Sábados de 2:00 p.m. a 5:00 p.m.</p>
+                </div>
+
+                <!-- Inicio inscripciones -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Inicio de inscripciones <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.enrollment_start }}
+                    {% if form.enrollment_start.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.enrollment_start.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Fin inscripciones -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Fin de inscripciones <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.enrollment_end }}
+                    {% if form.enrollment_end.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.enrollment_end.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Inicio clases -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Inicio de clases <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.class_start_date }}
+                    {% if form.class_start_date.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.class_start_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Fin clases -->
+                <div>
+                    <label class="block text-sm font-semibold text-javnavy mb-1">
+                        Fin de clases
+                    </label>
+                    {{ form.class_end_date }}
+                    {% if form.class_end_date.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.class_end_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Activo -->
+                <div class="sm:col-span-2 flex items-center gap-3 pt-2">
+                    {{ form.is_active }}
+                    <label class="text-sm font-semibold text-javnavy cursor-pointer" for="{{ form.is_active.id_for_label }}">
+                        Módulo activo (visible en el portal)
+                    </label>
+                </div>
+
             </div>
 
-            <div class="flex items-center justify-end mt-6 space-x-3">
-                <a href="{% url 'consultorio:module_list' %}" class="text-gray-600 hover:text-gray-900 px-4 py-2">
-                    Cancelar
+            <!-- Errores generales -->
+            {% if form.non_field_errors %}
+            <div class="mt-4 p-3 bg-red-50 border-l-4 border-red-400 text-red-700 text-sm rounded">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Botones -->
+            <div class="flex items-center justify-between mt-8">
+                <a href="{% url 'consultorio:admin_module_list' %}"
+                   class="text-gray-500 hover:text-gray-700 text-sm transition-colors">
+                    ← Volver a módulos
                 </a>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Guardar
+                <button type="submit"
+                        class="bg-javblue text-white text-sm font-semibold uppercase tracking-wide px-6 py-2 rounded-sm hover:bg-javnavy transition-colors">
+                    Guardar módulo
                 </button>
             </div>
         </form>

@@ -9,6 +9,7 @@ from users.models import UserSavedDefaults
 from .forms import EnrollmentForm
 from .models import Enrollment, Module
 
+
 @login_required
 def portal_home(request):
     modules = Module.objects.filter(is_active=True).order_by('enrollment_start')

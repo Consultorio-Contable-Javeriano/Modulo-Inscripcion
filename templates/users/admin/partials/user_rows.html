@@ -1,0 +1,30 @@
+{% for user in users %}
+<tr class="hover:bg-gray-50">
+    <td class="px-4 py-3 font-medium text-javnavy">
+        {% if user.profile %}{{ user.profile.full_name }}{% else %}<span class="text-gray-400 italic">Sin nombre</span>{% endif %}
+    </td>
+    <td class="px-4 py-3 text-gray-600 text-xs">{{ user.email }}</td>
+    <td class="px-4 py-3 text-gray-600 text-xs">
+        {% if user.profile %}{{ user.profile.get_id_type_display }} {{ user.profile.id_number }}{% else %}—{% endif %}
+    </td>
+    <td class="px-4 py-3 text-gray-600 text-xs">
+        {% if user.profile %}{{ user.profile.phone }}{% else %}—{% endif %}
+    </td>
+    <td class="px-4 py-3 text-gray-600 text-xs">
+        {% if user.profile %}{{ user.profile.education_level|default:"—" }}{% else %}—{% endif %}
+    </td>
+    <td class="px-4 py-3 text-gray-400 text-xs">{{ user.date_joined|date:"d/m/Y" }}</td>
+    <td class="px-4 py-3 text-center">
+        {% if user.profile %}
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">Completo</span>
+        {% else %}
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pendiente</span>
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="7" class="px-4 py-8 text-center text-gray-400">No se encontraron usuarios.</td>
+</tr>
+{% endfor %}
+

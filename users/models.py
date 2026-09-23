@@ -56,7 +56,6 @@ class UserProfile(models.Model):
         ('Otro', 'Otro'),
         ('Prefiero no decirlo', 'Prefiero no decirlo'),
     ]
-
     EDUCATION_LEVEL_CHOICES = [
         ('Primaria', 'Primaria'),
         ('Secundaria', 'Secundaria'),
@@ -69,24 +68,24 @@ class UserProfile(models.Model):
         ('Ninguna de las anteriores', 'Ninguna de las anteriores'),
     ]
 
+    # Rangos de edad del formulario oficial (pregunta 5)
+    AGE_RANGE_CHOICES = [
+        ('6-13', 'Entre 6 a 13 años'),
+        ('14-20', 'Entre 14 a 20 años'),
+        ('21-35', 'Entre 21 a 35 años'),
+        ('36-50', 'Entre 36 a 50 años'),
+        ('51-80', 'Entre 51 a 80 años'),
+    ]
+
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile', verbose_name='Usuario')
-    full_name = models.CharField('Nombre completo', max_length=255) #[cite: 1, 2]
-    id_type = models.CharField('Tipo de documento', max_length=50, choices=ID_TYPE_CHOICES) #[cite: 1, 2]
-    id_number = models.CharField('Número de documento', max_length=50, unique=True) #[cite: 1, 2]
     first_name = models.CharField('Nombres', max_length=150, default='')
     last_name = models.CharField('Apellidos', max_length=150, default='')
     id_type = models.CharField('Tipo de documento', max_length=50, choices=ID_TYPE_CHOICES)
     id_number = models.CharField('Número de documento', max_length=50, unique=True)
     birth_date = models.DateField('Fecha de nacimiento')
-    gender = models.CharField('Género', max_length=50, choices=GENDER_CHOICES) #[cite: 1, 2]
-    phone = models.CharField('Teléfono', max_length=50) #[cite: 1, 2]
     gender = models.CharField('Género', max_length=50, choices=GENDER_CHOICES)
     phone = models.CharField('Teléfono celular', max_length=50)
-    # Correo secundario opcional, pedido en el documento de levantamiento: sirve de
-    # respaldo para contactar al usuario sin reemplazar al correo de la cuenta.
     alternate_email = models.EmailField('Correo electrónico alternativo', blank=True, null=True)
-    education_level = models.CharField('Nivel educativo', max_length=100, blank=True, null=True) #[cite: 1, 2]
-    has_business = models.BooleanField('Tiene negocio propio', default=False) #[cite: 1, 2]
     education_level = models.CharField('Nivel educativo', max_length=100, choices=EDUCATION_LEVEL_CHOICES, blank=True, null=True)
     has_business = models.BooleanField('Tiene negocio propio', default=False)
 
@@ -96,9 +95,31 @@ class UserProfile(models.Model):
 
     @property
     def age(self):
-        # Cálculo dinámico de la edad para evitar datos obsoletos
         today = date.today()
-        return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+        return today.year - self.birth_date.year - (
+            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
+        )
+
+    @property
+    def age_range(self):
+        """Devuelve el rango de edad del formulario oficial que corresponde a la edad actual."""
+        a = self.age
+        if a <= 13:
+            return '6-13'
+        elif a <= 20:
+            return '14-20'
+        elif a <= 35:
+            return '21-35'
+        elif a <= 50:
+            return '36-50'
+        else:
+            return '51-80'
+
+    @property
+    def age_range_display(self):
+        """Etiqueta legible del rango de edad."""
+        mapping = dict(self.AGE_RANGE_CHOICES)
+        return mapping.get(self.age_range, '')
 
     class Meta:
         verbose_name = 'Perfil de usuario'
@@ -109,12 +130,11 @@ class UserProfile(models.Model):
 
 
 class UserSavedDefaults(models.Model):
-    # Tabla invisible para autocompletar formularios futuros
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='saved_defaults', verbose_name='Usuario')
-    last_entity = models.CharField('Última entidad', max_length=255, blank=True, null=True) #[cite: 1, 2]
-    last_city = models.CharField('Última ciudad', max_length=100, blank=True, null=True) #[cite: 1, 2]
+    last_entity = models.CharField('Última entidad', max_length=255, blank=True, null=True)
+    last_city = models.CharField('Última ciudad', max_length=100, blank=True, null=True)
     last_locality = models.CharField('Última localidad o comuna', max_length=100, blank=True, null=True)
-    last_neighborhood = models.CharField('Último barrio', max_length=100, blank=True, null=True) #[cite: 1, 2]
+    last_neighborhood = models.CharField('Último barrio', max_length=100, blank=True, null=True)
 
     class Meta:
         verbose_name = 'Valores predeterminados de usuario'
